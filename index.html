@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IB Math AI HL — Test Paper Generator</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --border: #e1e5eb;
+    --text: #222;
+    --muted: #666;
+    --accent: #7c3aed;
+    --accent-dark: #6d28d9;
+    --green: #10b981;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --t1: #ef4444;
+    --t2: #f59e0b;
+    --t3: #10b981;
+    --t4: #3b82f6;
+    --t5: #8b5cf6;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif; background: var(--bg); color: var(--text); }
+  header { background: linear-gradient(135deg, #4c1d95, #7c3aed); color:#fff; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top:0; z-index: 50; }
+  header h1 { margin:0; font-size: 18px; font-weight:600; }
+  header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .tabs { display:flex; gap: 4px; background: var(--panel); border-bottom: 1px solid var(--border); padding: 0 16px; position: sticky; top: 56px; z-index: 49; }
+  .tab { padding: 12px 20px; cursor: pointer; border: none; background: transparent; font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab:hover:not(.active) { background: #f0f4f8; }
+  main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { margin: 0 0 12px 0; font-size: 16px; }
+  button { background: var(--accent); color:#fff; border: 0; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  button:hover { background: var(--accent-dark); }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover { background: #f5f5f5; }
+  button.danger { background: var(--red); }
+  button.danger:hover { background: #dc2626; }
+  button.success { background: var(--green); }
+  input, select, textarea { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; }
+  label { font-size: 13px; color: var(--muted); }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .stat .num { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .stat .lbl { font-size: 12px; color: var(--muted); }
+  .filter-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .topic-chip { display:inline-block; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:600; color:#fff; }
+  .t1 { background: var(--t1); } .t2 { background: var(--t2); } .t3 { background: var(--t3); } .t4 { background: var(--t4); } .t5 { background: var(--t5); }
+  .t0 { background: #999; }
+  .code-chip { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; color:#fff; letter-spacing:0.2px; }
+  .code-chip.sub { opacity: 0.55; font-weight:600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .qcard { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: pointer; transition: transform 0.1s; }
+  .qcard:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+  .qcard.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
+  .qcard.untagged { background: #fffaf0; }
+  .qcard .qid { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .qcard .meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .qcard img { max-width: 100%; max-height: 200px; object-fit: contain; background: #fafafa; border-radius: 4px; display: block; margin: 4px 0; }
+  .qcard .tags { display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+  .qcard .note { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--panel); padding: 16px; border-radius: 10px; max-width: 92vw; max-height: 92vh; overflow: auto; min-width: 620px; }
+  .modal img { max-width: 100%; max-height: 58vh; display: block; margin: 8px 0; }
+  .modal .ms-img { border: 2px dashed var(--border); padding: 4px; }
+  kbd { background:#f1f5f9; border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:1px 6px; font-size:11px; font-family:monospace; }
+  .help-box { background: #f5f3ff; border-left: 4px solid var(--accent); padding: 10px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; align-items:center; }
+  .gen-output { background: #fff; padding: 16px; border:1px solid var(--border); border-radius:8px; margin-top:16px; }
+  .gen-output img { max-width: 100%; border:1px solid #ddd; margin-bottom: 8px; }
+  .qbox-print { page-break-inside: avoid; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px dashed #ccc; }
+  .qbox-print:last-child { border-bottom: 0; }
+
+  .restore-banner { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .restore-banner.hidden { display: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #ddd; color: #555; }
+  .badge.ok { background: #d1fae5; color: #065f46; }
+  .badge.warn { background: #fef3c7; color: #92400e; }
+  .sub-picker { display:flex; flex-wrap:wrap; gap:4px; max-height:120px; overflow:auto; border:1px solid var(--border); border-radius:6px; padding:6px; background:#fafafa; }
+  .sub-opt { font-size:11px; border:1px solid var(--border); background:#fff; border-radius:5px; padding:2px 6px; cursor:pointer; user-select:none; }
+  .sub-opt.on { color:#fff; border-color:transparent; font-weight:700; }
+  table.cov { border-collapse: collapse; font-size: 12px; width:100%; }
+  table.cov th, table.cov td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
+  table.cov th { background:#f8fafc; }
+  table.cov td.n { text-align:right; width:60px; }
+  table.cov tr.zero td { color:#aaa; }
+
+  @media print {
+    header, .tabs, .no-print { display: none !important; }
+    main { padding:0; max-width:none; }
+    .panel { border: 0; box-shadow: none; padding: 0; margin:0; }
+    .qbox-print { page-break-inside: avoid; }
+    .page-break { page-break-before: always; }
+    body { background: #fff; }
+  }
+  .hidden { display: none !important; }
+  .small { font-size: 11px; color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 10px; background:#eef2f7; color:#444; }
+  .marks-input { width: 50px !important; padding: 4px 6px !important; }
+  .folder-list { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .folder-tag { background: #eef2f7; border-radius: 12px; padding: 3px 10px; font-size: 11px; color:#333; display:inline-flex; align-items:center; gap:4px; }
+  .folder-tag .x { cursor: pointer; color: var(--red); font-weight: bold; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IB Math AI HL — Past Paper Test Generator</h1>
+  <div class="subtitle" id="loadStatus">Initializing…</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="bank">Question Bank</button>
+  <button class="tab" data-tab="generate">Generate Test</button>
+  <button class="tab" data-tab="coverage">Syllabus Coverage</button>
+  <button class="tab" data-tab="settings">Settings</button>
+</div>
+
+<main>
+
+<!-- ============== QUESTION BANK TAB ============== -->
+<section id="tab-bank">
+
+  <div class="restore-banner hidden" id="restoreBanner">
+    <span>📁</span>
+    <span id="restoreMessage">Previously loaded folder available.</span>
+    <button id="btnRestoreAll" class="success">Reload all</button>
+    <button id="btnForgetAll" class="secondary">Forget</button>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <button id="btnLoad" class="success">📁 Load Folder</button>
+      <span class="small" id="folderInfo">No folders loaded</span>
+      <span class="badge" id="apiBadge">Detecting…</span>
+    </div>
+    <div class="folder-list" id="folderList"></div>
+    <div class="help-box" style="margin-top:12px;">
+      <strong>使い方：</strong>「Load Folder」で <code>IB-AIHL</code> フォルダ（Paper1 / Paper2 のサブフォルダごと）を選んでください。サブフォルダは自動で読み込みます。
+      ブラウザがフォルダを記憶するので、次回からは「Reload all」を押すだけです。
+      <br><strong>タグ：</strong> 全 <strong id="presetCount">0</strong> 問にシラバス項目（SL/AHL コード）・配点がプリセット済みです。問題をクリックすると拡大表示され、その場で修正できます。
+      <br><kbd>1</kbd>–<kbd>5</kbd> トピック、<kbd>→</kbd>/<kbd>←</kbd> 移動、<kbd>S</kbd> 保存、<kbd>M</kbd> 解答表示、<kbd>Esc</kbd> 閉じる
+    </div>
+    <div class="legend">
+      <span class="topic-chip t1">1</span> Number &amp; Algebra
+      <span class="topic-chip t2">2</span> Functions
+      <span class="topic-chip t3">3</span> Geometry &amp; Trig
+      <span class="topic-chip t4">4</span> Stats &amp; Probability
+      <span class="topic-chip t5">5</span> Calculus
+      <span class="small">｜ 濃い色 = 主タグ、薄い色 = 副タグ</span>
+    </div>
+  </div>
+
+  <div class="stats" id="statsBox"></div>
+
+  <div class="panel">
+    <div class="filter-bar">
+      <label>Search: <input id="searchInput" placeholder="e.g. 2023May TZ1 Q5 / Markov / AHL4.19" style="width:220px"></label>
+      <label>Paper:
+        <select id="filterPaper"><option value="">All</option><option value="Paper1">Paper 1</option><option value="Paper2">Paper 2</option></select>
+      </label>
+      <label>Level:
+        <select id="filterLevel"><option value="">All</option><option value="SL">SL content</option><option value="AHL">AHL content</option></select>
+      </label>
+      <label>Topic:
+        <select id="filterTopic">
+          <option value="">All</option>
+          <option value="0">Untagged</option>
+        </select>
+      </label>
+      <label>Syllabus item:
+        <select id="filterCode" style="min-width:230px"><option value="">All</option></select>
+      </label>
+      <label>Year:
+        <select id="filterYear"><option value="">All</option></select>
+      </label>
+      <label>Session:
+        <select id="filterMonth"><option value="">All</option></select>
+      </label>
+      <label>TZ:
+        <select id="filterTZ"><option value="">All</option></select>
+      </label>
+      <label><input type="checkbox" id="inclSub" checked> 副タグも含める</label>
+      <label><input type="checkbox" id="showImg" checked> Show thumbnails</label>
+      <span class="small" id="resultCount"></span>
+    </div>
+    <div id="bankGrid" class="grid"></div>
+  </div>
+</section>
+
+<!-- ============== GENERATE TEST TAB ============== -->
+<section id="tab-generate" class="hidden">
+  <div class="panel">
+    <h2>Test Paper Settings</h2>
+    <div class="row">
+      <label>Title: <input id="testTitle" value="IB Math AI HL — Practice Test" style="width:280px"></label>
+      <label>Date: <input id="testDate" type="date"></label>
+      <label>Total marks (target): <input id="targetMarks" type="number" value="40" min="1" max="300" style="width:80px"></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Paper type:
+        <select id="genPaper"><option value="">Any</option><option value="Paper1">Paper 1 only</option><option value="Paper2">Paper 2 only</option></select>
+      </label>
+      <label>Level:
+        <select id="genLevel"><option value="">Any</option><option value="SL">SL content</option><option value="AHL">AHL content</option></select>
+      </label>
+      <label>Topics:
+        <select id="genTopics" multiple size="5" style="min-width:190px;"></select>
+      </label>
+      <label>Syllabus items (優先):
+        <select id="genCodes" multiple size="5" style="min-width:300px;"></select>
+      </label>
+      <label>Year range:
+        <select id="genYearFrom"><option value="">From</option></select>
+        →
+        <select id="genYearTo"><option value="">To</option></select>
+      </label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Selection mode:
+        <select id="genMode">
+          <option value="random">Random (auto)</option>
+          <option value="manual">Manual pick</option>
+        </select>
+      </label>
+      <label>Sort questions by:
+        <select id="genSort">
+          <option value="topic">Topic / syllabus order</option>
+          <option value="marks-asc">Marks (low → high)</option>
+          <option value="marks-desc">Marks (high → low)</option>
+          <option value="random">Random order</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="includeMS" checked> Include Mark Scheme</label>
+      <label><input type="checkbox" id="avoidDup" checked> Avoid recently used (last 30 days)</label>
+      <label><input type="checkbox" id="genInclSub"> 副タグでも一致させる</label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="btnGenerate" class="success">⚡ Generate</button>
+      <button id="btnPrint" class="secondary">🖨 Print / Save as PDF</button>
+      <button id="btnClear" class="secondary">Clear</button>
+    </div>
+  </div>
+
+  <div id="manualPickPanel" class="panel hidden">
+    <h2>Manual Selection</h2>
+
+    <div id="selectionTray" style="background:#f5f3ff; border:2px solid var(--accent); border-radius:8px; padding:12px; margin-bottom:14px;">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <div>
+          <strong>📋 Selection Tray</strong>
+          <span id="selectionCount" class="badge ok" style="margin-left: 8px;">0 selected</span>
+          <span id="selectionMarks" class="small" style="margin-left: 6px;"></span>
+        </div>
+        <div class="row">
+          <button id="btnGenPdfFromSelection" class="success">📄 Generate PDF from Selection</button>
+          <button id="btnClearSelection" class="secondary">Clear</button>
+        </div>
+      </div>
+      <div id="selectedList" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+        <span class="small" id="selectedEmpty">No questions selected yet — click any question below to preview and add.</span>
+      </div>
+    </div>
+
+    <div class="small">Click any question to preview (question + mark scheme). Add to the tray above.</div>
+    <div id="manualGrid" class="grid" style="margin-top:10px;"></div>
+  </div>
+
+  <div id="genOutput" class="gen-output hidden"></div>
+</section>
+
+<!-- ============== COVERAGE TAB ============== -->
+<section id="tab-coverage" class="hidden">
+  <div class="panel">
+    <h2>Syllabus Coverage — どの項目に何問あるか</h2>
+    <div class="row">
+      <label>Level: <select id="covLevel"><option value="">All</option><option value="SL">SL</option><option value="AHL">AHL</option></select></label>
+      <label><input type="checkbox" id="covInclSub" checked> 副タグも数える</label>
+      <label><input type="checkbox" id="covHideZero"> 0件の項目を隠す</label>
+      <span class="small" id="covSummary"></span>
+    </div>
+    <div id="covTables" style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(380px,1fr)); gap:16px;"></div>
+  </div>
+</section>
+
+<!-- ============== SETTINGS TAB ============== -->
+<section id="tab-settings" class="hidden">
+  <div class="panel">
+    <h2>Tag Database</h2>
+    <p class="small">タグはブラウザ（localStorage）に保存されます。プリセットは初回読み込み時に自動で入り、あなたが編集した問題は上書きされません。</p>
+    <div class="row">
+      <button id="btnExportTags" class="secondary">⬇ Export tags as JSON</button>
+      <button id="btnImportTags" class="secondary">⬆ Import tags from JSON</button>
+      <input type="file" id="importFile" class="hidden" accept=".json">
+      <button id="btnResetPreset" class="secondary">♻ Reset to preset tags</button>
+      <button id="btnClearTags" class="danger">🗑 Clear all tags</button>
+    </div>
+    <pre id="tagPreview" style="background:#f8fafc; padding:10px; border-radius:6px; max-height:220px; overflow:auto; font-size:11px; margin-top:10px;"></pre>
+  </div>
+
+  <div class="panel">
+    <h2>Saved Folders</h2>
+    <p class="small">一度読み込んだフォルダは IndexedDB に記憶されます。次回は許可クリックだけで再読み込みできます。</p>
+    <div id="savedFoldersList" class="small"></div>
+    <button id="btnClearFolderHandles" class="danger" style="margin-top:8px;">🗑 Forget all folders</button>
+  </div>
+
+  <div class="panel">
+    <h2>Usage History</h2>
+    <p class="small">生成したテストに使った問題の履歴（「Avoid recently used」で使用）。</p>
+    <div class="row">
+      <button id="btnExportHist" class="secondary">⬇ Export history</button>
+      <button id="btnClearHist" class="danger">🗑 Clear history</button>
+    </div>
+    <div id="histPreview" class="small" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Bulk Tag Helper</h2>
+    <p class="small">ファイル名パターンで一括タグ付け（例：2023May-Paper1-TZ1）。</p>
+    <div class="row">
+      <label>Filter pattern: <input id="bulkPattern" placeholder="e.g. 2023May-Paper1-TZ1" style="width:260px"></label>
+      <label>Set code: <select id="bulkCode" style="min-width:220px"><option value="">--</option></select></label>
+      <label>Set Marks: <input id="bulkMarks" type="number" min="1" max="40" style="width:60px"></label>
+      <button id="btnBulkApply">Apply</button>
+      <span id="bulkPreview" class="small"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>About</h2>
+    <p class="small">
+      IB Math AI <strong>HL</strong> の過去問 PNG を、subject guide のシラバス項目（SL 1.1 〜 AHL 5.18 の全78項目）でタグ付け・検索し、テストを生成するための単一ページアプリです。
+      <br>タグとフォルダ許可はブラウザ内にのみ保存され、サーバーには何も送信されません。過去問の PNG もあなたのパソコンから出ません。
+    </p>
+  </div>
+</section>
+
+</main>
+
+<!-- Modal for tagging -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="row" style="justify-content: space-between;">
+      <strong id="modalTitle">Question</strong>
+      <button class="secondary" id="modalClose">✕ Close (Esc)</button>
+    </div>
+    <div id="modalImgs"></div>
+    <div class="row" style="margin-top: 10px; gap: 14px; align-items:flex-start;">
+      <label>Topic:
+        <select id="modalTopic"><option value="">-- not set --</option></select>
+      </label>
+      <label>主タグ (syllabus item):
+        <select id="modalCode" style="min-width:280px"><option value="">-- not set --</option></select>
+      </label>
+      <label>Marks: <input class="marks-input" id="modalMarks" type="number" min="1" max="40"></label>
+      <label>Difficulty:
+        <select id="modalDifficulty"><option value="">-</option><option value="E">Easy</option><option value="M">Medium</option><option value="H">Hard</option></select>
+      </label>
+      <label>Note: <input id="modalNote" style="width: 220px"></label>
+    </div>
+    <div style="margin-top:10px;">
+      <label class="small">副タグ（複数選択可・クリックで切替、主タグのトピック以外も選べます）</label>
+      <div class="row" style="margin:4px 0 6px;">
+        <label class="small">絞り込み:
+          <select id="subFilterTopic" style="font-size:11px; padding:4px;"><option value="">全トピック</option></select>
+        </label>
+        <span class="small" id="subSelectedInfo"></span>
+      </div>
+      <div class="sub-picker" id="subPicker"></div>
+    </div>
+    <div class="row" style="margin-top: 10px;">
+      <button id="modalPrev" class="secondary">← Prev</button>
+      <button id="modalSave" class="success">💾 Save</button>
+      <button id="modalNext" class="secondary">Next →</button>
+      <button id="modalToggleMS" class="secondary">Show MS</button>
+      <button id="modalPrint" class="secondary">🖨 Print / PDF</button>
+      <button id="modalAddToSelection" class="hidden success">＋ Add to Selection</button>
+      <span class="small">Shortcuts: <kbd>1</kbd>–<kbd>5</kbd> topic, <kbd>S</kbd> save, <kbd>←</kbd>/<kbd>→</kbd> nav, <kbd>M</kbd> MS, <kbd>P</kbd> print, <kbd>A</kbd> add</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// IB Math AI HL Test Generator — GitHub Pages Edition
+// Folder handles persist in IndexedDB; tags persist in localStorage.
+// Past paper PNG files stay on the user's local computer.
+// ============================================================
+
+const STORAGE_KEY  = 'ibAihl_tags_v1';
+const HISTORY_KEY  = 'ibAihl_history_v1';
+const PRESET_KEY   = 'ibAihl_presetVersion';
+const IDB_NAME     = 'ibAihlDB';
+const IDB_STORE    = 'folderHandles';
+
+// ============================================================
+// IB Mathematics: Applications & Interpretation HL — Syllabus master
+// Codes exactly as in the subject guide (SL x.y / AHL x.y)
+// ============================================================
+const SYLLABUS = {
+  "1": {
+    en: "Number & Algebra", ja: "数と代数",
+    items: [
+      ["SL1.1",  "Standard form a×10^k",                         "指数表記 a×10^k"],
+      ["SL1.2",  "Arithmetic sequences & series",                "等差数列・級数"],
+      ["SL1.3",  "Geometric sequences & series",                 "等比数列・級数"],
+      ["SL1.4",  "Financial applications (compound interest, depreciation)", "複利・減価償却などの金融応用"],
+      ["SL1.5",  "Laws of exponents; logarithms base 10 and e",  "指数法則・常用対数と自然対数"],
+      ["SL1.6",  "Approximation, bounds, percentage error",      "近似・上下限・誤差率"],
+      ["SL1.7",  "Amortization & annuities",                     "ローン償還・年金"],
+      ["SL1.8",  "Solving systems / polynomial equations with technology", "連立方程式・多項式方程式（GDC）"],
+      ["AHL1.9", "Laws of logarithms",                           "対数法則"],
+      ["AHL1.10","Rational exponents",                           "有理数乗の計算"],
+      ["AHL1.11","Sum of infinite geometric sequences",          "無限等比級数の和"],
+      ["AHL1.12","Complex numbers: Cartesian form, complex plane","複素数（直交形式・複素平面）"],
+      ["AHL1.13","Modulus–argument & exponential form",          "極形式・指数形式"],
+      ["AHL1.14","Matrices: algebra, determinant, inverse",      "行列（演算・行列式・逆行列）"],
+      ["AHL1.15","Eigenvalues & eigenvectors, diagonalization",  "固有値・固有ベクトル・対角化"]
+    ]
+  },
+  "2": {
+    en: "Functions", ja: "関数",
+    items: [
+      ["SL2.1",  "Straight lines: gradient, intercepts, forms",  "直線（傾き・切片・式の形）"],
+      ["SL2.2",  "Concept of function, domain, range, inverse",  "関数の概念・定義域・値域・逆関数"],
+      ["SL2.3",  "Graphing functions with technology",           "グラフの作成（GDC）"],
+      ["SL2.4",  "Key features of graphs; intersections",        "グラフの特徴・交点"],
+      ["SL2.5",  "Modelling: linear, quadratic, exponential, cubic, sinusoidal", "モデリング（1次・2次・指数・3次・三角）"],
+      ["SL2.6",  "Modelling skills (fit, test, reflect)",        "モデリングのプロセス"],
+      ["AHL2.7", "Composite & inverse functions",                "合成関数・逆関数"],
+      ["AHL2.8", "Transformations of graphs",                    "グラフの変換"],
+      ["AHL2.9", "Further models: half-life, ln, sinusoidal, logistic, piecewise", "発展モデル（半減期・対数・正弦・ロジスティック・区分関数）"],
+      ["AHL2.10","Log-log & semi-log graphs; linearizing data",  "両対数・片対数グラフ／データの線形化"]
+    ]
+  },
+  "3": {
+    en: "Geometry & Trigonometry", ja: "幾何と三角法",
+    items: [
+      ["SL3.1",  "3D geometry: distance, volume, surface area, angles", "空間図形（距離・体積・表面積・角）"],
+      ["SL3.2",  "Sine rule, cosine rule, area of triangle",     "正弦定理・余弦定理・三角形の面積"],
+      ["SL3.3",  "Applications: bearings, elevation/depression", "応用（方位・仰角俯角）"],
+      ["SL3.4",  "Arc length & sector area (degrees)",           "弧の長さ・扇形の面積（度数法）"],
+      ["SL3.5",  "Perpendicular bisectors",                      "垂直二等分線"],
+      ["SL3.6",  "Voronoi diagrams",                             "ボロノイ図"],
+      ["AHL3.7", "Radian measure",                               "弧度法"],
+      ["AHL3.8", "Unit circle, identities, ambiguous case",      "単位円・三角恒等式・あいまいな場合"],
+      ["AHL3.9", "Matrix transformations of points",             "行列による幾何変換"],
+      ["AHL3.10","Vectors: concept, components, magnitude",      "ベクトル（成分・大きさ）"],
+      ["AHL3.11","Vector equation of a line",                    "直線のベクトル方程式"],
+      ["AHL3.12","Vector applications to kinematics",            "ベクトルと運動"],
+      ["AHL3.13","Scalar (dot) & vector (cross) products",       "内積・外積"],
+      ["AHL3.14","Graph theory: graphs, vertices, edges, trees", "グラフ理論（頂点・辺・木）"],
+      ["AHL3.15","Adjacency & transition matrices, walks",       "隣接行列・推移行列・ウォーク"],
+      ["AHL3.16","Tree & cycle algorithms (MST, Chinese postman, TSP)", "木・閉路アルゴリズム（MST・中国人郵便配達・TSP）"]
+    ]
+  },
+  "4": {
+    en: "Statistics & Probability", ja: "統計と確率",
+    items: [
+      ["SL4.1",  "Sampling: population, sample, reliability, bias", "標本抽出（母集団・標本・信頼性・偏り）"],
+      ["SL4.2",  "Presentation of data: histograms, cumulative frequency, box plots", "データの表示（ヒストグラム・累積度数・箱ひげ図）"],
+      ["SL4.3",  "Central tendency & dispersion",                "代表値と散らばり"],
+      ["SL4.4",  "Linear correlation, Pearson's r, regression",  "相関・ピアソンの r・回帰直線"],
+      ["SL4.5",  "Probability concepts, sample space",           "確率の基礎・標本空間"],
+      ["SL4.6",  "Venn/tree diagrams, conditional probability",  "ベン図・樹形図・条件付き確率"],
+      ["SL4.7",  "Discrete random variables, expected value",    "離散確率変数・期待値"],
+      ["SL4.8",  "Binomial distribution",                        "二項分布"],
+      ["SL4.9",  "Normal distribution (incl. inverse normal)",   "正規分布（逆正規も）"],
+      ["SL4.10", "Spearman's rank correlation",                  "スピアマンの順位相関"],
+      ["SL4.11", "Hypothesis testing: chi-squared, t-test",      "仮説検定（カイ二乗・t検定）"],
+      ["AHL4.12","Data collection design, reliability & validity","データ収集法の設計・信頼性と妥当性"],
+      ["AHL4.13","Non-linear regression, SSres, R²",             "非線形回帰・残差平方和・決定係数"],
+      ["AHL4.14","Linear transformations & combinations of random variables; unbiased estimators", "確率変数の線形変換・線形結合・不偏推定量"],
+      ["AHL4.15","Central limit theorem; distribution of sample mean", "中心極限定理・標本平均の分布"],
+      ["AHL4.16","Confidence intervals for the mean",            "平均の信頼区間"],
+      ["AHL4.17","Poisson distribution",                         "ポアソン分布"],
+      ["AHL4.18","Critical values/regions, tests for mean & proportion, Type I/II errors", "棄却域・平均や比率の検定・第1種第2種の誤り"],
+      ["AHL4.19","Transition matrices & Markov chains (steady state)", "推移行列・マルコフ連鎖（定常状態）"]
+    ]
+  },
+  "5": {
+    en: "Calculus", ja: "微分積分",
+    items: [
+      ["SL5.1",  "Limits; derivative as gradient / rate of change", "極限・導関数の意味"],
+      ["SL5.2",  "Increasing & decreasing functions",            "増加・減少"],
+      ["SL5.3",  "Differentiation of polynomials (integer powers)", "多項式の微分（整数乗）"],
+      ["SL5.4",  "Tangents & normals",                           "接線・法線"],
+      ["SL5.5",  "Introduction to integration; area under a curve", "積分の導入・面積"],
+      ["SL5.6",  "Stationary points, local max/min",             "停留点・極大極小"],
+      ["SL5.7",  "Optimisation",                                 "最適化"],
+      ["SL5.8",  "Trapezoidal rule",                             "台形公式"],
+      ["AHL5.9", "Derivatives of sin, cos, tan, e^x, ln x, x^n; chain/product/quotient rules; related rates", "各種関数の微分・積の商の合成の法則・関連する変化率"],
+      ["AHL5.10","Second derivative, concavity, points of inflexion", "2階導関数・凹凸・変曲点"],
+      ["AHL5.11","Integration by inspection/substitution",       "積分（見抜き・置換）"],
+      ["AHL5.12","Area between curves; volumes of revolution",   "曲線で囲まれた面積・回転体の体積"],
+      ["AHL5.13","Kinematics with calculus",                     "微積分による運動"],
+      ["AHL5.14","Differential equations; separation of variables", "微分方程式・変数分離"],
+      ["AHL5.15","Slope fields",                                 "傾き場"],
+      ["AHL5.16","Euler's method (incl. coupled systems)",       "オイラー法（連立系も）"],
+      ["AHL5.17","Phase portraits, eigenvalue analysis of coupled systems", "相図・連立系の固有値解析"],
+      ["AHL5.18","Second order differential equations (Euler / exact)", "2階微分方程式（オイラー法・厳密解）"]
+    ]
+  }
+};
+
+const PRESET_VERSION = '2026-09-12a';
+const PRESET_TAGS = {
+  "2021May-Paper1-TZ1-Q1": {"code": "AHL4.17", "subcodes": [], "marks": 4, "note": "Poisson probability, scaled mean"},
+  "2021May-Paper1-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 6, "note": "Voronoi diagram, edge gradient"},
+  "2021May-Paper1-TZ1-Q3": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.8"], "marks": 8, "note": "Arithmetic versus geometric sequences"},
+  "2021May-Paper1-TZ1-Q4": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.6"], "marks": 6, "note": "Exponential decay model, domain"},
+  "2021May-Paper1-TZ1-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 6, "note": "Vector cross product, triangle area"},
+  "2021May-Paper1-TZ1-Q6": {"code": "SL1.6", "subcodes": ["SL3.2"], "marks": 5, "note": "Upper bounds, maximum triangle area"},
+  "2021May-Paper1-TZ1-Q7": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6"], "marks": 8, "note": "Optimisation of gift box area"},
+  "2021May-Paper1-TZ1-Q8": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 7, "note": "Discrete distribution, expected score"},
+  "2021May-Paper1-TZ1-Q9": {"code": "AHL1.12", "subcodes": ["AHL1.13"], "marks": 8, "note": "Complex numbers as Argand transformations"},
+  "2021May-Paper1-TZ1-Q10": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Prim's algorithm, TSP lower bound"},
+  "2021May-Paper1-TZ1-Q11": {"code": "AHL4.18", "subcodes": ["SL4.8", "SL4.1"], "marks": 7, "note": "Binomial test of proportion"},
+  "2021May-Paper1-TZ1-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 8, "note": "Differential equation, separation of variables"},
+  "2021May-Paper1-TZ1-Q13": {"code": "AHL3.11", "subcodes": ["AHL3.10"], "marks": 7, "note": "Vector line equation, submarine path"},
+  "2021May-Paper1-TZ1-Q14": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Sum of normal random variables"},
+  "2021May-Paper1-TZ1-Q15": {"code": "AHL5.15", "subcodes": ["SL2.1", "AHL3.8"], "marks": 5, "note": "Slope field, minima maxima lines"},
+  "2021May-Paper1-TZ1-Q16": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 5, "note": "Adjacency matrix, counting walks"},
+  "2021May-Paper1-TZ1-Q17": {"code": "AHL2.8", "subcodes": ["AHL1.9", "AHL2.9"], "marks": 7, "note": "Translation of logarithmic graph"},
+  "2021May-Paper1-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL2.1", "SL1.8"], "marks": 7, "note": "Perpendicular bisector meets road"},
+  "2021May-Paper1-TZ2-Q2": {"code": "AHL2.7", "subcodes": ["SL2.2"], "marks": 7, "note": "Range and inverse of function"},
+  "2021May-Paper1-TZ2-Q3": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Two-sample t-test on weights"},
+  "2021May-Paper1-TZ2-Q4": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 6, "note": "Angles of elevation, swimmer speed"},
+  "2021May-Paper1-TZ2-Q5": {"code": "SL1.4", "subcodes": ["SL1.3", "SL1.8"], "marks": 5, "note": "Depreciation of two laptops"},
+  "2021May-Paper1-TZ2-Q6": {"code": "SL2.4", "subcodes": ["SL2.5", "SL1.8"], "marks": 7, "note": "Quadratic vertex, roots, symmetry"},
+  "2021May-Paper1-TZ2-Q7": {"code": "SL1.3", "subcodes": ["AHL1.11", "SL2.6"], "marks": 6, "note": "Geometric series balloon height"},
+  "2021May-Paper1-TZ2-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13", "SL1.8"], "marks": 7, "note": "Perpendicular lines, intersection test"},
+  "2021May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": [], "marks": 8, "note": "Chi-squared goodness of fit"},
+  "2021May-Paper1-TZ2-Q10": {"code": "AHL4.16", "subcodes": ["AHL4.14", "SL4.3"], "marks": 6, "note": "Unbiased estimates, confidence interval"},
+  "2021May-Paper1-TZ2-Q11": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Chinese postman, open route"},
+  "2021May-Paper1-TZ2-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 8, "note": "Modulus-argument and exponential form"},
+  "2021May-Paper1-TZ2-Q13": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL1.14"], "marks": 8, "note": "Transition matrix, steady state"},
+  "2021May-Paper1-TZ2-Q14": {"code": "AHL3.9", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 7, "note": "Matrix transformation of points"},
+  "2021May-Paper1-TZ2-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Poisson test, type I error"},
+  "2021May-Paper1-TZ2-Q16": {"code": "AHL5.16", "subcodes": ["AHL5.14", "SL1.6"], "marks": 8, "note": "Euler's method versus exact solution"},
+  "2021May-Paper2-TZ1-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 19, "note": "Compound interest and loan repayment"},
+  "2021May-Paper2-TZ1-Q2": {"code": "SL5.6", "subcodes": ["SL5.3", "SL5.8", "SL5.5"], "marks": 16, "note": "Cubic maximum, trapezoid, area"},
+  "2021May-Paper2-TZ1-Q3": {"code": "SL4.9", "subcodes": ["SL4.11"], "marks": 13, "note": "Normal distribution, chi-squared goodness-of-fit"},
+  "2021May-Paper2-TZ1-Q4": {"code": "AHL5.12", "subcodes": ["AHL4.13", "SL2.1"], "marks": 14, "note": "Volume of revolution, quadratic regression"},
+  "2021May-Paper2-TZ1-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 13, "note": "Transition matrix, diagonalization, long term"},
+  "2021May-Paper2-TZ1-Q6": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 18, "note": "Vector kinematics, velocity magnitude"},
+  "2021May-Paper2-TZ1-Q7": {"code": "AHL5.16", "subcodes": ["AHL5.14", "AHL5.17"], "marks": 17, "note": "Coupled equations, Euler, equilibrium"},
+  "2021May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": [], "marks": 15, "note": "Cosine rule, sine rule, area"},
+  "2021May-Paper2-TZ2-Q2": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6"], "marks": 16, "note": "Normal distribution, binomial, conditional probability"},
+  "2021May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "SL5.3", "SL2.3"], "marks": 15, "note": "Optimising volume of hexagonal prism"},
+  "2021May-Paper2-TZ2-Q4": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 18, "note": "Transition matrix, long-term steady state"},
+  "2021May-Paper2-TZ2-Q5": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 14, "note": "Poisson distribution, sums and binomial"},
+  "2021May-Paper2-TZ2-Q6": {"code": "AHL5.13", "subcodes": ["SL5.3", "SL5.5"], "marks": 15, "note": "Kinematics with calculus, total distance"},
+  "2021May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL5.14"], "marks": 17, "note": "Coupled system, phase portrait, eigenvalues"},
+  "2021Nov-Paper1-TZ0-Q1": {"code": "SL2.1", "subcodes": [], "marks": 6, "note": "Gradients, perpendicular lines, line equation"},
+  "2021Nov-Paper1-TZ0-Q2": {"code": "SL5.8", "subcodes": ["SL1.6"], "marks": 5, "note": "Trapezoidal rule, percentage error"},
+  "2021Nov-Paper1-TZ0-Q3": {"code": "SL2.2", "subcodes": ["AHL2.7"], "marks": 7, "note": "Range, domain and inverse function"},
+  "2021Nov-Paper1-TZ0-Q4": {"code": "SL3.6", "subcodes": ["SL3.5"], "marks": 6, "note": "Voronoi diagram, toxic waste site"},
+  "2021Nov-Paper1-TZ0-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 9, "note": "Amortization, monthly repayment, interest paid"},
+  "2021Nov-Paper1-TZ0-Q6": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Infinite geometric sum, common ratio"},
+  "2021Nov-Paper1-TZ0-Q7": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 8, "note": "Cumulative frequency graph, median, mean"},
+  "2021Nov-Paper1-TZ0-Q8": {"code": "SL5.1", "subcodes": ["SL5.2", "SL5.6"], "marks": 5, "note": "Interpreting derivative graph, sketching function"},
+  "2021Nov-Paper1-TZ0-Q9": {"code": "AHL4.19", "subcodes": ["AHL3.15"], "marks": 5, "note": "Transition diagram, long-run cycling probability"},
+  "2021Nov-Paper1-TZ0-Q10": {"code": "AHL2.8", "subcodes": [], "marks": 4, "note": "Transformations of a graph"},
+  "2021Nov-Paper1-TZ0-Q11": {"code": "AHL3.8", "subcodes": ["SL3.2"], "marks": 6, "note": "Ambiguous case, minimum triangle area", "confidence": "low"},
+  "2021Nov-Paper1-TZ0-Q12": {"code": "AHL2.10", "subcodes": ["SL4.4", "AHL1.9"], "marks": 5, "note": "Log-log linearization, power model prediction"},
+  "2021Nov-Paper1-TZ0-Q13": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, sketching solution curves"},
+  "2021Nov-Paper1-TZ0-Q14": {"code": "SL4.9", "subcodes": ["AHL4.14"], "marks": 7, "note": "Normal distribution, sum of weights"},
+  "2021Nov-Paper1-TZ0-Q15": {"code": "SL5.7", "subcodes": ["SL3.4", "AHL3.7", "SL5.3"], "marks": 9, "note": "Optimising volume of sector prism"},
+  "2021Nov-Paper1-TZ0-Q16": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 9, "note": "Ship closest approach to lighthouse"},
+  "2021Nov-Paper1-TZ0-Q17": {"code": "AHL5.12", "subcodes": ["AHL5.11", "AHL2.7"], "marks": 7, "note": "Volume of revolution about y-axis"},
+  "2021Nov-Paper2-TZ0-Q1": {"code": "SL3.1", "subcodes": ["SL3.3", "SL3.2"], "marks": 14, "note": "Pyramid frustum volume and area"},
+  "2021Nov-Paper2-TZ0-Q2": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.3"], "marks": 20, "note": "Sinusoidal model of turbine blade"},
+  "2021Nov-Paper2-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6", "SL4.7"], "marks": 16, "note": "Normal and binomial darts probabilities"},
+  "2021Nov-Paper2-TZ0-Q4": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 18, "note": "Matrix transformations rotation and reflection"},
+  "2021Nov-Paper2-TZ0-Q5": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 13, "note": "Exponential form complex numbers, AC currents"},
+  "2021Nov-Paper2-TZ0-Q6": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17"], "marks": 15, "note": "Second order differential equation eigenvalues"},
+  "2021Nov-Paper2-TZ0-Q7": {"code": "AHL4.18", "subcodes": ["AHL4.17", "SL4.8"], "marks": 14, "note": "Hypothesis tests for Poisson mean, proportion"},
+  "2022May-Paper1-TZ1-Q1": {"code": "SL2.5", "subcodes": ["SL2.2", "SL2.4"], "marks": 5, "note": "Quadratic height model and domain"},
+  "2022May-Paper1-TZ1-Q2": {"code": "SL1.8", "subcodes": [], "marks": 5, "note": "System of three linear equations"},
+  "2022May-Paper1-TZ1-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared goodness of fit"},
+  "2022May-Paper1-TZ1-Q4": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Tree diagram, conditional probability socks"},
+  "2022May-Paper1-TZ1-Q5": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence bouncing ball heights"},
+  "2022May-Paper1-TZ1-Q6": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 8, "note": "3D vectors, length and angle"},
+  "2022May-Paper1-TZ1-Q7": {"code": "AHL5.15", "subcodes": [], "marks": 4, "note": "Slope field sketching solution curves"},
+  "2022May-Paper1-TZ1-Q8": {"code": "AHL5.10", "subcodes": ["AHL5.9"], "marks": 6, "note": "Second derivative, point of inflexion"},
+  "2022May-Paper1-TZ1-Q9": {"code": "AHL4.15", "subcodes": ["SL4.9"], "marks": 6, "note": "Distribution of sample mean weights"},
+  "2022May-Paper1-TZ1-Q10": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 7, "note": "Argand diagram, modulus-argument form"},
+  "2022May-Paper1-TZ1-Q11": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 5, "note": "Eigenvector and long-term steady state", "confidence": "low"},
+  "2022May-Paper1-TZ1-Q12": {"code": "SL1.5", "subcodes": ["AHL4.17", "AHL1.9"], "marks": 8, "note": "Logarithmic earthquake model, Poisson probability", "confidence": "low"},
+  "2022May-Paper1-TZ1-Q13": {"code": "AHL3.12", "subcodes": ["AHL3.11", "SL3.3"], "marks": 5, "note": "Ship position vector and bearing"},
+  "2022May-Paper1-TZ1-Q14": {"code": "AHL5.12", "subcodes": ["AHL5.11"], "marks": 8, "note": "Integration and volume of revolution"},
+  "2022May-Paper1-TZ1-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Type I and II errors"},
+  "2022May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.1"], "marks": 7, "note": "Related rates, wind chill index"},
+  "2022May-Paper1-TZ1-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5", "AHL1.9", "SL2.4"], "marks": 8, "note": "Exponential-cosine model parameters from graph", "confidence": "low"},
+  "2022May-Paper1-TZ2-Q1": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 6, "note": "Two-way table conditional probability"},
+  "2022May-Paper1-TZ2-Q2": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 8, "note": "Angle of depression, cosine rule"},
+  "2022May-Paper1-TZ2-Q3": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 7, "note": "Binomial probability and expected value"},
+  "2022May-Paper1-TZ2-Q4": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 7, "note": "Area between line and curve"},
+  "2022May-Paper1-TZ2-Q5": {"code": "SL2.5", "subcodes": ["SL1.8", "SL2.4"], "marks": 8, "note": "Cubic model fitted through four points"},
+  "2022May-Paper1-TZ2-Q6": {"code": "AHL3.15", "subcodes": ["AHL1.14"], "marks": 5, "note": "Adjacency matrix and walks"},
+  "2022May-Paper1-TZ2-Q7": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Sum of infinite geometric sequence"},
+  "2022May-Paper1-TZ2-Q8": {"code": "SL1.6", "subcodes": ["SL3.4"], "marks": 8, "note": "Bounds and percentage error, sector"},
+  "2022May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": ["AHL4.14", "SL4.3"], "marks": 8, "note": "One-tailed t-test, unbiased estimates"},
+  "2022May-Paper1-TZ2-Q10": {"code": "AHL2.7", "subcodes": ["SL1.5"], "marks": 5, "note": "Inverse of logarithmic function"},
+  "2022May-Paper1-TZ2-Q11": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 6, "note": "Compound interest, inflation, annual investment"},
+  "2022May-Paper1-TZ2-Q12": {"code": "AHL4.18", "subcodes": ["SL4.9", "SL4.6"], "marks": 6, "note": "Type I and II errors"},
+  "2022May-Paper1-TZ2-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Complex exponential form, voltage sum"},
+  "2022May-Paper1-TZ2-Q14": {"code": "SL5.8", "subcodes": ["AHL5.12"], "marks": 4, "note": "Trapezoidal rule for volume of revolution"},
+  "2022May-Paper1-TZ2-Q15": {"code": "AHL3.9", "subcodes": ["AHL3.11", "AHL1.14"], "marks": 7, "note": "Matrix transformation of a line"},
+  "2022May-Paper1-TZ2-Q16": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 7, "note": "Velocity and acceleration vectors"},
+  "2022May-Paper1-TZ2-Q17": {"code": "AHL5.9", "subcodes": ["SL5.5", "AHL3.12"], "marks": 8, "note": "Related rates on beach curve"},
+  "2022May-Paper2-TZ1-Q1": {"code": "SL4.10", "subcodes": ["SL4.3", "SL4.4", "SL4.2"], "marks": 16, "note": "Spearman rank, quartiles, outliers"},
+  "2022May-Paper2-TZ1-Q2": {"code": "SL3.4", "subcodes": ["SL3.2", "AHL5.9", "AHL5.11"], "marks": 17, "note": "Sector, segment area, rate integration"},
+  "2022May-Paper2-TZ1-Q3": {"code": "SL4.11", "subcodes": ["SL4.1", "SL4.3", "AHL4.14"], "marks": 13, "note": "t-test, sampling, linear transformation"},
+  "2022May-Paper2-TZ1-Q4": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.16", "AHL5.17"], "marks": 13, "note": "Second order equation, eigenvalues, Euler"},
+  "2022May-Paper2-TZ1-Q5": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 15, "note": "Binomial overbooking and expected profit"},
+  "2022May-Paper2-TZ1-Q6": {"code": "AHL2.8", "subcodes": ["AHL5.12", "SL5.4", "AHL2.9"], "marks": 18, "note": "Graph transformations, piecewise, areas"},
+  "2022May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.10"], "marks": 18, "note": "Matrix transformations, rotation and enlargement"},
+  "2022May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.4"], "marks": 13, "note": "Arithmetic sequence, geometric series growth"},
+  "2022May-Paper2-TZ2-Q2": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6", "SL2.4"], "marks": 15, "note": "Optimisation of cubic profit model"},
+  "2022May-Paper2-TZ2-Q3": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1", "SL3.2"], "marks": 18, "note": "Voronoi diagram, bisectors, triangle area"},
+  "2022May-Paper2-TZ2-Q4": {"code": "AHL2.10", "subcodes": ["AHL5.9", "SL4.4", "AHL1.9"], "marks": 15, "note": "Semi-log linearization of Arrhenius equation"},
+  "2022May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 12, "note": "Markov chain, eigenvectors, long-term state"},
+  "2022May-Paper2-TZ2-Q6": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10", "SL2.4"], "marks": 21, "note": "Projectile motion with vectors"},
+  "2022May-Paper2-TZ2-Q7": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17", "SL2.4"], "marks": 16, "note": "Second order differential equation, exact solution"},
+  "2022Nov-Paper1-TZ0-Q1": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Chi-squared test for independence"},
+  "2022Nov-Paper1-TZ0-Q2": {"code": "SL2.5", "subcodes": ["AHL2.7"], "marks": 5, "note": "exponential cooling model, inverse function"},
+  "2022Nov-Paper1-TZ0-Q3": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 5, "note": "3D trigonometry in triangular prism"},
+  "2022Nov-Paper1-TZ0-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 7, "note": "adjacency matrix, counting walks"},
+  "2022Nov-Paper1-TZ0-Q5": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "expected value, fair game"},
+  "2022Nov-Paper1-TZ0-Q6": {"code": "SL2.5", "subcodes": [], "marks": 6, "note": "sinusoidal model of wheel height"},
+  "2022Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "savings annuity with monthly deposits"},
+  "2022Nov-Paper1-TZ0-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13"], "marks": 7, "note": "intersecting vector lines, acute angle"},
+  "2022Nov-Paper1-TZ0-Q9": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 8, "note": "matrix transformation, determinant, inverse"},
+  "2022Nov-Paper1-TZ0-Q10": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "logarithmic star brightness model"},
+  "2022Nov-Paper1-TZ0-Q11": {"code": "SL2.5", "subcodes": ["AHL2.8"], "marks": 5, "note": "cubic regression and enlargement", "confidence": "low"},
+  "2022Nov-Paper1-TZ0-Q12": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 5, "note": "phase portraits from eigenvalues"},
+  "2022Nov-Paper1-TZ0-Q13": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "semi-log graph linearizing data"},
+  "2022Nov-Paper1-TZ0-Q14": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL5.11"], "marks": 9, "note": "kinematics: acceleration and displacement"},
+  "2022Nov-Paper1-TZ0-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 5, "note": "Euler method, second order ODE"},
+  "2022Nov-Paper1-TZ0-Q16": {"code": "AHL4.18", "subcodes": ["SL4.8"], "marks": 8, "note": "Type I and II errors"},
+  "2022Nov-Paper1-TZ0-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5"], "marks": 8, "note": "combining sinusoidal daylight models"},
+  "2022Nov-Paper2-TZ0-Q1": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 15, "note": "Venn diagram, conditional probability, binomial"},
+  "2022Nov-Paper2-TZ0-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 13, "note": "Voronoi diagram, perpendicular bisectors"},
+  "2022Nov-Paper2-TZ0-Q3": {"code": "SL5.6", "subcodes": ["SL5.5", "SL5.8", "SL5.7"], "marks": 17, "note": "maximum, area integral, optimisation", "confidence": "low"},
+  "2022Nov-Paper2-TZ0-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 14, "note": "travelling salesman upper lower bounds"},
+  "2022Nov-Paper2-TZ0-Q5": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.9"], "marks": 13, "note": "volumes of revolution about y-axis"},
+  "2022Nov-Paper2-TZ0-Q6": {"code": "AHL4.14", "subcodes": ["SL4.9", "SL4.11"], "marks": 18, "note": "sum of normal variables, t-test"},
+  "2022Nov-Paper2-TZ0-Q7": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 20, "note": "vector kinematics of two particles"},
+  "2023May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 5, "note": "savings account with regular deposits"},
+  "2023May-Paper1-TZ1-Q2": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "two-sample t-test, p-value"},
+  "2023May-Paper1-TZ1-Q3": {"code": "SL3.6", "subcodes": ["SL3.1"], "marks": 5, "note": "nearest neighbour interpolation, distance"},
+  "2023May-Paper1-TZ1-Q4": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 8, "note": "trapezoidal rule, integral, percentage error"},
+  "2023May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 5, "note": "bearings with cosine and sine"},
+  "2023May-Paper1-TZ1-Q6": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "linear and quadratic path models"},
+  "2023May-Paper1-TZ1-Q7": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 9, "note": "vector product, triangle area, angle"},
+  "2023May-Paper1-TZ1-Q8": {"code": "AHL4.18", "subcodes": ["SL4.4", "SL4.11"], "marks": 7, "note": "Correlation test p-value bivariate normal"},
+  "2023May-Paper1-TZ1-Q9": {"code": "SL4.9", "subcodes": [], "marks": 5, "note": "Normal distribution inverse normal"},
+  "2023May-Paper1-TZ1-Q10": {"code": "AHL2.9", "subcodes": ["SL5.3", "SL2.1"], "marks": 9, "note": "Piecewise model quadratics matching gradients"},
+  "2023May-Paper1-TZ1-Q11": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Linear combination of normal variables"},
+  "2023May-Paper1-TZ1-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Phasor addition of AC voltages"},
+  "2023May-Paper1-TZ1-Q13": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 6, "note": "Euler method second order ODE"},
+  "2023May-Paper1-TZ1-Q14": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "Log-log graph power relationship"},
+  "2023May-Paper1-TZ1-Q15": {"code": "AHL5.12", "subcodes": ["SL2.1"], "marks": 6, "note": "Volume of revolution about y-axis"},
+  "2023May-Paper1-TZ1-Q16": {"code": "AHL4.13", "subcodes": ["SL5.6"], "marks": 6, "note": "Sum of square residuals least squares"},
+  "2023May-Paper1-TZ1-Q17": {"code": "AHL5.9", "subcodes": ["AHL3.7", "SL3.3"], "marks": 9, "note": "Related rates angle of elevation"},
+  "2023May-Paper1-TZ2-Q1": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.6"], "marks": 7, "note": "Quadratic model projectile height"},
+  "2023May-Paper1-TZ2-Q2": {"code": "SL4.11", "subcodes": [], "marks": 4, "note": "Chi-squared test for independence"},
+  "2023May-Paper1-TZ2-Q3": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Venn diagram independence conditional probability"},
+  "2023May-Paper1-TZ2-Q4": {"code": "SL1.4", "subcodes": [], "marks": 6, "note": "Compound interest and depreciation"},
+  "2023May-Paper1-TZ2-Q5": {"code": "SL4.9", "subcodes": [], "marks": 6, "note": "Normal distribution inverse normal"},
+  "2023May-Paper1-TZ2-Q6": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "Sphere volume cone surface area"},
+  "2023May-Paper1-TZ2-Q7": {"code": "SL4.8", "subcodes": [], "marks": 6, "note": "Binomial distribution expected value"},
+  "2023May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 7, "note": "Adjacency matrix counting walks"},
+  "2023May-Paper1-TZ2-Q9": {"code": "SL4.10", "subcodes": ["SL4.4", "AHL4.13"], "marks": 9, "note": "Spearman rank coefficient of determination"},
+  "2023May-Paper1-TZ2-Q10": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Chi-squared goodness of fit"},
+  "2023May-Paper1-TZ2-Q11": {"code": "SL2.5", "subcodes": ["AHL1.13", "SL2.3"], "marks": 6, "note": "Combining sinusoidal AC voltages", "confidence": "low"},
+  "2023May-Paper1-TZ2-Q12": {"code": "AHL5.9", "subcodes": ["SL3.1"], "marks": 5, "note": "Related rates inflating sphere"},
+  "2023May-Paper1-TZ2-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 7, "note": "Composite matrix transformations determinant area"},
+  "2023May-Paper1-TZ2-Q14": {"code": "AHL3.12", "subcodes": ["SL3.3", "AHL3.10"], "marks": 8, "note": "Ship position vectors bearings"},
+  "2023May-Paper1-TZ2-Q15": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 6, "note": "Confidence interval for population mean"},
+  "2023May-Paper1-TZ2-Q16": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.7"], "marks": 9, "note": "Volume of revolution about y-axis"},
+  "2023May-Paper1-TZ2-Q17": {"code": "AHL5.14", "subcodes": ["AHL5.16", "AHL5.11"], "marks": 6, "note": "Separation of variables differential equation"},
+  "2023May-Paper2-TZ1-Q1": {"code": "SL2.1", "subcodes": ["SL4.4", "SL2.6"], "marks": 13, "note": "Straight line model and regression"},
+  "2023May-Paper2-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 15, "note": "Sinusoidal tide depth model"},
+  "2023May-Paper2-TZ1-Q3": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 17, "note": "Tree diagram testing binomial probability"},
+  "2023May-Paper2-TZ1-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14", "SL1.6"], "marks": 17, "note": "TSP bounds, MST, Eulerian trail"},
+  "2023May-Paper2-TZ1-Q5": {"code": "AHL4.17", "subcodes": ["SL4.11", "AHL4.14"], "marks": 15, "note": "Poisson chi-squared goodness of fit"},
+  "2023May-Paper2-TZ1-Q6": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL1.12"], "marks": 15, "note": "Complex eigenvalues, spiral phase portrait"},
+  "2023May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "SL3.2"], "marks": 18, "note": "Rotation and enlargement matrices, determinant"},
+  "2023May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": ["SL3.4", "SL3.1"], "marks": 13, "note": "Sine/cosine rule, triangle area, arc"},
+  "2023May-Paper2-TZ2-Q2": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.4"], "marks": 12, "note": "Exponential growth model, bacteria populations"},
+  "2023May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL1.8"], "marks": 16, "note": "Optimisation of garden area"},
+  "2023May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 19, "note": "Kruskal MST, TSP upper/lower bounds"},
+  "2023May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.14", "SL1.8"], "marks": 14, "note": "Transition matrix and steady state"},
+  "2023May-Paper2-TZ2-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.18"], "marks": 18, "note": "Poisson probabilities, critical region, Type II"},
+  "2023May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 18, "note": "Coupled system eigenvectors, phase portrait"},
+  "2024May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 6, "note": "Compound interest and annuity"},
+  "2024May-Paper1-TZ1-Q2": {"code": "SL4.4", "subcodes": [], "marks": 7, "note": "Pearson's r and regression line"},
+  "2024May-Paper1-TZ1-Q3": {"code": "AHL4.14", "subcodes": ["SL2.2", "SL4.3"], "marks": 6, "note": "Linear transformation of mean, standard deviation"},
+  "2024May-Paper1-TZ1-Q4": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
+  "2024May-Paper1-TZ1-Q5": {"code": "SL3.5", "subcodes": ["SL3.6", "SL2.1"], "marks": 6, "note": "Perpendicular bisectors and Voronoi diagram"},
+  "2024May-Paper1-TZ1-Q6": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence and series sums"},
+  "2024May-Paper1-TZ1-Q7": {"code": "SL2.5", "subcodes": ["AHL1.10", "SL1.5"], "marks": 8, "note": "Direct proportion power models, big cats"},
+  "2024May-Paper1-TZ1-Q8": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 5, "note": "Chinese postman problem, odd vertices"},
+  "2024May-Paper1-TZ1-Q9": {"code": "AHL5.11", "subcodes": ["SL5.5", "AHL1.9"], "marks": 7, "note": "Integration by substitution, area under curve"},
+  "2024May-Paper1-TZ1-Q10": {"code": "SL3.4", "subcodes": ["SL3.2"], "marks": 5, "note": "Arc length in semicircle"},
+  "2024May-Paper1-TZ1-Q11": {"code": "AHL3.9", "subcodes": ["AHL3.8", "AHL1.14"], "marks": 8, "note": "Rotation matrices prove double angle"},
+  "2024May-Paper1-TZ1-Q12": {"code": "AHL4.13", "subcodes": ["SL2.6", "SL1.5"], "marks": 8, "note": "Sum of square residuals, model comparison"},
+  "2024May-Paper1-TZ1-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL3.2"], "marks": 6, "note": "Modulus, argument, exponential form, Argand"},
+  "2024May-Paper1-TZ1-Q14": {"code": "AHL2.8", "subcodes": ["SL1.8", "SL2.5"], "marks": 4, "note": "Transformed displacement graph, cars meeting", "confidence": "low"},
+  "2024May-Paper1-TZ1-Q15": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 6, "note": "Phase portrait trajectories, eigenvector regions"},
+  "2024May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.4", "AHL3.7"], "marks": 8, "note": "Tangent to cosine curve, ladder"},
+  "2024May-Paper1-TZ1-Q17": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 9, "note": "Eigenvectors, diagonalization of transition matrix"},
+  "2024May-Paper1-TZ2-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 9, "note": "Compound interest and loan repayments"},
+  "2024May-Paper1-TZ2-Q2": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 6, "note": "Binomial probability and expected earnings"},
+  "2024May-Paper1-TZ2-Q3": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "pH logarithmic scale calculations"},
+  "2024May-Paper1-TZ2-Q4": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "Probability distribution and expected value"},
+  "2024May-Paper1-TZ2-Q5": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 8, "note": "Geometric growth and infinite sum"},
+  "2024May-Paper1-TZ2-Q6": {"code": "SL3.2", "subcodes": ["SL3.4"], "marks": 6, "note": "Triangle area versus sector area"},
+  "2024May-Paper1-TZ2-Q7": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
+  "2024May-Paper1-TZ2-Q8": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 10, "note": "Dot and cross products, parallelogram"},
+  "2024May-Paper1-TZ2-Q9": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 6, "note": "Poisson probabilities and binomial model"},
+  "2024May-Paper1-TZ2-Q10": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.3"], "marks": 9, "note": "Volume of revolution after stretches"},
+  "2024May-Paper1-TZ2-Q11": {"code": "SL5.4", "subcodes": ["AHL5.12", "SL5.3"], "marks": 9, "note": "Normal to parabola, enclosed area"},
+  "2024May-Paper1-TZ2-Q12": {"code": "AHL3.11", "subcodes": ["AHL3.12", "AHL3.10"], "marks": 7, "note": "Vector line equations, interception point"},
+  "2024May-Paper1-TZ2-Q13": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL3.7"], "marks": 8, "note": "Kinematics: velocity, distance, average speed"},
+  "2024May-Paper1-TZ2-Q14": {"code": "AHL4.13", "subcodes": ["SL2.6", "AHL2.9"], "marks": 6, "note": "Power and exponential regression models"},
+  "2024May-Paper1-TZ2-Q15": {"code": "AHL1.13", "subcodes": ["AHL3.9", "AHL1.12"], "marks": 8, "note": "Complex exponential form, rotation matrix"},
+  "2024May-Paper2-TZ1-Q1": {"code": "SL4.9", "subcodes": ["SL4.8", "SL2.1"], "marks": 15, "note": "Normal distribution, binomial, linear charge"},
+  "2024May-Paper2-TZ1-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.2"], "marks": 12, "note": "Vectors, scalar product angle, sine rule"},
+  "2024May-Paper2-TZ1-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL2.5"], "marks": 13, "note": "Profit model optimisation by differentiation"},
+  "2024May-Paper2-TZ1-Q4": {"code": "SL4.11", "subcodes": ["SL4.6"], "marks": 12, "note": "Tree diagram and chi-squared goodness-of-fit"},
+  "2024May-Paper2-TZ1-Q5": {"code": "AHL5.14", "subcodes": ["AHL5.15", "AHL5.9"], "marks": 13, "note": "Slope field and separation of variables"},
+  "2024May-Paper2-TZ1-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.14", "AHL4.15"], "marks": 13, "note": "Poisson, combined variables, central limit"},
+  "2024May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["AHL5.9"], "marks": 14, "note": "Volume of revolution and related rates"},
+  "2024May-Paper2-TZ1-Q8": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL3.14"], "marks": 18, "note": "Adjacency matrix, walks, Markov steady state"},
+  "2024May-Paper2-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL3.3", "SL2.1"], "marks": 14, "note": "Perpendicular bisectors, distance, bearing"},
+  "2024May-Paper2-TZ2-Q2": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 15, "note": "Trapezoidal rule, integration, percentage error"},
+  "2024May-Paper2-TZ2-Q3": {"code": "SL3.1", "subcodes": ["SL5.7", "AHL5.9", "AHL3.7"], "marks": 22, "note": "Prism volume modelling and trigonometric optimisation", "confidence": "low"},
+  "2024May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 12, "note": "Nearest neighbour, Prim's algorithm bounds"},
+  "2024May-Paper2-TZ2-Q5": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 16, "note": "Eigenvectors, diagonalization, long-term parking", "confidence": "low"},
+  "2024May-Paper2-TZ2-Q6": {"code": "SL1.2", "subcodes": ["SL4.6", "SL4.5"], "marks": 14, "note": "Triangle numbers series and probability", "confidence": "low"},
+  "2024May-Paper2-TZ2-Q7": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 17, "note": "Sums of independent normal random variables"},
+  "2024Nov-Paper1-TZ0-Q1": {"code": "SL3.2", "subcodes": [], "marks": 5, "note": "Cosine rule and triangle area"},
+  "2024Nov-Paper1-TZ0-Q2": {"code": "AHL2.9", "subcodes": ["SL1.5"], "marks": 6, "note": "Exponential decay model, half-life"},
+  "2024Nov-Paper1-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.5"], "marks": 7, "note": "Normal distribution, inverse normal"},
+  "2024Nov-Paper1-TZ0-Q4": {"code": "SL1.2", "subcodes": ["SL1.4"], "marks": 5, "note": "Arithmetic sequence, simple interest"},
+  "2024Nov-Paper1-TZ0-Q5": {"code": "SL3.6", "subcodes": [], "marks": 6, "note": "Voronoi diagram cells and areas"},
+  "2024Nov-Paper1-TZ0-Q6": {"code": "AHL2.9", "subcodes": ["SL2.1"], "marks": 4, "note": "Piecewise linear cost model"},
+  "2024Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": [], "marks": 6, "note": "Annuity withdrawals with technology"},
+  "2024Nov-Paper1-TZ0-Q8": {"code": "SL2.5", "subcodes": [], "marks": 7, "note": "Sinusoidal daylight model parameters"},
+  "2024Nov-Paper1-TZ0-Q9": {"code": "AHL1.13", "subcodes": ["AHL1.12", "AHL3.9"], "marks": 5, "note": "Complex modulus argument, Argand plot"},
+  "2024Nov-Paper1-TZ0-Q10": {"code": "AHL2.7", "subcodes": ["AHL2.8", "AHL1.9"], "marks": 8, "note": "Composite functions with log transformations"},
+  "2024Nov-Paper1-TZ0-Q11": {"code": "AHL1.15", "subcodes": ["AHL1.14"], "marks": 8, "note": "Eigenvalues, eigenvectors, diagonalization"},
+  "2024Nov-Paper1-TZ0-Q12": {"code": "AHL4.13", "subcodes": ["SL1.3", "SL2.6"], "marks": 7, "note": "Sum of squared residuals, exponential regression"},
+  "2024Nov-Paper1-TZ0-Q13": {"code": "AHL2.9", "subcodes": ["SL1.8"], "marks": 6, "note": "Logistic model carrying capacity"},
+  "2024Nov-Paper1-TZ0-Q14": {"code": "AHL5.9", "subcodes": ["SL5.4", "SL1.8"], "marks": 8, "note": "Chain rule derivative, normal angle"},
+  "2024Nov-Paper1-TZ0-Q15": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 8, "note": "Combinations of normal random variables"},
+  "2024Nov-Paper1-TZ0-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.7", "SL2.4"], "marks": 7, "note": "Volume of revolution about y-axis"},
+  "2024Nov-Paper1-TZ0-Q17": {"code": "AHL5.16", "subcodes": ["SL2.6"], "marks": 7, "note": "Euler's method, coupled predator-prey"},
+  "2024Nov-Paper2-TZ0-Q1": {"code": "SL4.10", "subcodes": ["SL4.2", "SL4.3"], "marks": 14, "note": "Spearman's rank, quartiles, outliers"},
+  "2024Nov-Paper2-TZ0-Q2": {"code": "SL5.7", "subcodes": ["SL5.8", "SL5.5", "SL3.1"], "marks": 18, "note": "Optimisation of cylinder surface area"},
+  "2024Nov-Paper2-TZ0-Q3": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 15, "note": "Geometric sequences, infinite sum"},
+  "2024Nov-Paper2-TZ0-Q4": {"code": "SL3.1", "subcodes": ["SL3.2", "AHL3.8"], "marks": 17, "note": "Pyramid volume, angles, ambiguous case"},
+  "2024Nov-Paper2-TZ0-Q5": {"code": "AHL3.12", "subcodes": ["AHL3.13", "AHL3.11"], "marks": 15, "note": "Vector kinematics, closest approach"},
+  "2024Nov-Paper2-TZ0-Q6": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 13, "note": "Matrix transformations, rotation and enlargement"},
+  "2024Nov-Paper2-TZ0-Q7": {"code": "AHL5.17", "subcodes": ["AHL5.18", "AHL1.15"], "marks": 18, "note": "Phase portrait, coupled second-order system"},
+  "2025May-Paper1-TZ1-Q1": {"code": "SL3.4", "subcodes": [], "marks": 6, "note": "Sector area and arc length"},
+  "2025May-Paper1-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "Quadratic model of dolphin jump"},
+  "2025May-Paper1-TZ1-Q3": {"code": "SL1.7", "subcodes": [], "marks": 8, "note": "Loan amortization, monthly payments"},
+  "2025May-Paper1-TZ1-Q4": {"code": "AHL2.9", "subcodes": ["SL2.1", "SL4.3"], "marks": 7, "note": "Piecewise linear cost of hats", "confidence": "low"},
+  "2025May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 9, "note": "Bearings with cosine and sine rules"},
+  "2025May-Paper1-TZ1-Q6": {"code": "AHL2.7", "subcodes": ["SL2.5"], "marks": 6, "note": "Composite functions of discount models"},
+  "2025May-Paper1-TZ1-Q7": {"code": "AHL5.13", "subcodes": ["AHL5.10", "SL2.3"], "marks": 8, "note": "Kinematics, velocity graph, distance travelled"},
+  "2025May-Paper1-TZ1-Q8": {"code": "SL5.5", "subcodes": ["SL2.4", "SL1.8"], "marks": 7, "note": "Area under cubic and quadratic curves"},
+  "2025May-Paper1-TZ1-Q9": {"code": "SL4.8", "subcodes": ["SL4.9", "SL4.6"], "marks": 7, "note": "Normal probability then binomial"},
+  "2025May-Paper1-TZ1-Q10": {"code": "AHL2.7", "subcodes": ["AHL1.9", "SL2.2"], "marks": 9, "note": "Log laws and inverse function"},
+  "2025May-Paper1-TZ1-Q11": {"code": "AHL1.13", "subcodes": ["AHL1.11", "SL1.3", "AHL1.12"], "marks": 8, "note": "Complex geometric sequence, moduli sum"},
+  "2025May-Paper1-TZ1-Q12": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, zero-gradient curve"},
+  "2025May-Paper1-TZ1-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 7, "note": "Matrix rotation and reflection composition"},
+  "2025May-Paper1-TZ1-Q14": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 6, "note": "Exponential form summing sinusoidal functions"},
+  "2025May-Paper1-TZ1-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16", "SL1.6"], "marks": 8, "note": "Euler method second order ODE"},
+  "2025May-Paper1-TZ2-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "Savings annuity and compound interest"},
+  "2025May-Paper1-TZ2-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 9, "note": "3D vectors, dot product, angle"},
+  "2025May-Paper1-TZ2-Q3": {"code": "SL4.10", "subcodes": [], "marks": 6, "note": "Spearman's rank correlation coefficient"},
+  "2025May-Paper1-TZ2-Q4": {"code": "SL3.6", "subcodes": ["SL3.5", "SL3.1"], "marks": 7, "note": "Voronoi diagram vertices equidistant sites"},
+  "2025May-Paper1-TZ2-Q5": {"code": "SL1.6", "subcodes": [], "marks": 6, "note": "Upper and lower bounds, speed"},
+  "2025May-Paper1-TZ2-Q6": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 5, "note": "Unbiased variance and confidence interval"},
+  "2025May-Paper1-TZ2-Q7": {"code": "AHL5.11", "subcodes": ["SL5.5"], "marks": 7, "note": "Integration by substitution, area"},
+  "2025May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 6, "note": "Adjacency matrix, graph, walks"},
+  "2025May-Paper1-TZ2-Q9": {"code": "AHL5.9", "subcodes": ["SL5.2"], "marks": 7, "note": "Related rates of change area"},
+  "2025May-Paper1-TZ2-Q10": {"code": "SL2.2", "subcodes": [], "marks": 5, "note": "Function table and inverse values"},
+  "2025May-Paper1-TZ2-Q11": {"code": "SL2.4", "subcodes": ["SL1.8", "SL5.6"], "marks": 6, "note": "Cubic roots and turning points", "confidence": "low"},
+  "2025May-Paper1-TZ2-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables, velocity model"},
+  "2025May-Paper1-TZ2-Q13": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 9, "note": "Poisson distribution with binomial part"},
+  "2025May-Paper1-TZ2-Q14": {"code": "AHL2.10", "subcodes": ["AHL4.13", "AHL1.9"], "marks": 6, "note": "Semi-log versus log-log linearization"},
+  "2025May-Paper1-TZ2-Q15": {"code": "SL5.4", "subcodes": ["SL2.1", "SL5.3"], "marks": 8, "note": "Normal to parabola, angle between lines"},
+  "2025May-Paper1-TZ2-Q16": {"code": "AHL1.12", "subcodes": ["AHL1.13", "SL2.4"], "marks": 7, "note": "Complex roots, modulus maximized"},
+  "2025May-Paper1-TZ3-Q1": {"code": "SL3.2", "subcodes": [], "marks": 9, "note": "Cosine rule, sine rule, distance"},
+  "2025May-Paper1-TZ3-Q2": {"code": "SL1.5", "subcodes": ["SL1.1"], "marks": 5, "note": "Logarithmic decibel scale, standard form"},
+  "2025May-Paper1-TZ3-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared test for independence"},
+  "2025May-Paper1-TZ3-Q4": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 7, "note": "Box plot, IQR, outliers"},
+  "2025May-Paper1-TZ3-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 8, "note": "Loan amortization, early repayment"},
+  "2025May-Paper1-TZ3-Q6": {"code": "SL1.2", "subcodes": ["SL4.8", "SL4.5"], "marks": 6, "note": "Arithmetic series sectors, binomial game"},
+  "2025May-Paper1-TZ3-Q7": {"code": "SL4.4", "subcodes": ["SL4.1"], "marks": 7, "note": "Stratified sampling, Pearson r, regression"},
+  "2025May-Paper1-TZ3-Q8": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 5, "note": "Matrix transformations of points"},
+  "2025May-Paper1-TZ3-Q9": {"code": "AHL5.9", "subcodes": ["SL5.4"], "marks": 6, "note": "Product chain rule tangent"},
+  "2025May-Paper1-TZ3-Q10": {"code": "AHL2.10", "subcodes": ["SL2.5"], "marks": 8, "note": "Inverse square log-log linearization"},
+  "2025May-Paper1-TZ3-Q11": {"code": "AHL5.16", "subcodes": ["AHL5.17"], "marks": 6, "note": "Euler method coupled system"},
+  "2025May-Paper1-TZ3-Q12": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 5, "note": "Type I error Poisson"},
+  "2025May-Paper1-TZ3-Q13": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables growth"},
+  "2025May-Paper1-TZ3-Q14": {"code": "AHL3.12", "subcodes": ["AHL5.13"], "marks": 8, "note": "Projectile vector kinematics"},
+  "2025May-Paper1-TZ3-Q15": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 6, "note": "Markov chain steady state"},
+  "2025May-Paper1-TZ3-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.4"], "marks": 8, "note": "Volume of revolution between curves"},
+  "2025May-Paper2-TZ1-Q1": {"code": "SL4.3", "subcodes": ["SL4.2", "SL4.6", "SL4.5"], "marks": 15, "note": "Frequency table mean box plot"},
+  "2025May-Paper2-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 19, "note": "Voronoi diagram fire stations"},
+  "2025May-Paper2-TZ1-Q3": {"code": "AHL4.13", "subcodes": ["AHL2.9", "AHL5.10", "AHL5.9"], "marks": 17, "note": "Quadratic regression logistic model"},
+  "2025May-Paper2-TZ1-Q4": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 17, "note": "3D vector flight paths"},
+  "2025May-Paper2-TZ1-Q5": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 16, "note": "3D prism volume and angle"},
+  "2025May-Paper2-TZ1-Q6": {"code": "AHL5.14", "subcodes": ["AHL5.11", "SL1.8"], "marks": 14, "note": "Separation of variables virus model"},
+  "2025May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 12, "note": "Volume of revolution table design"},
+  "2025May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": [], "marks": 16, "note": "Arithmetic sequences and series"},
+  "2025May-Paper2-TZ2-Q2": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL5.9"], "marks": 12, "note": "Area between curves tangents"},
+  "2025May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.9"], "marks": 16, "note": "Optimisation of cylinder surface area"},
+  "2025May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": [], "marks": 13, "note": "Prim algorithm travelling salesman bounds"},
+  "2025May-Paper2-TZ2-Q5": {"code": "SL4.11", "subcodes": ["AHL4.18", "SL4.3", "SL4.5"], "marks": 15, "note": "Chi-squared and proportion tests"},
+  "2025May-Paper2-TZ2-Q6": {"code": "AHL5.18", "subcodes": ["AHL5.17", "AHL5.16"], "marks": 21, "note": "Second order differential equation"},
+  "2025May-Paper2-TZ2-Q7": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 17, "note": "Markov chain steady state"},
+  "2025May-Paper2-TZ3-Q1": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.10"], "marks": 20, "note": "Optimisation container surface area"},
+  "2025May-Paper2-TZ3-Q2": {"code": "SL2.5", "subcodes": ["SL1.6", "SL2.4"], "marks": 15, "note": "Sinusoidal tide model"},
+  "2025May-Paper2-TZ3-Q3": {"code": "SL5.8", "subcodes": ["SL2.4", "SL2.5"], "marks": 12, "note": "Trapezoidal rule river cross-section"},
+  "2025May-Paper2-TZ3-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.16", "AHL3.14"], "marks": 16, "note": "Adjacency matrix walks and bounds"},
+  "2025May-Paper2-TZ3-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10", "AHL3.11", "AHL3.12"], "marks": 15, "note": "Vector dot product angle", "confidence": "low"},
+  "2025May-Paper2-TZ3-Q6": {"code": "SL4.7", "subcodes": ["AHL4.14", "SL4.9", "SL4.6"], "marks": 15, "note": "Expected value normal combinations", "confidence": "low"},
+  "2025May-Paper2-TZ3-Q7": {"code": "AHL1.13", "subcodes": ["SL1.3", "AHL1.11", "AHL1.12"], "marks": 17, "note": "Complex exponential form fractal tree"}
+};
+
+const TOPIC_NAMES = {};
+for (const t of Object.keys(SYLLABUS)) TOPIC_NAMES[t] = SYLLABUS[t].en;
+
+// Flat lookup: code -> {topic, en, ja, level, label}
+const CODE_INFO = {};
+const ALL_CODES = [];
+for (const t of Object.keys(SYLLABUS)) {
+  for (const [code, en, ja] of SYLLABUS[t].items) {
+    CODE_INFO[code] = {
+      topic: t, en, ja,
+      level: code.startsWith('AHL') ? 'AHL' : 'SL',
+      label: code.replace(/^(SL|AHL)/, '$1 ')
+    };
+    ALL_CODES.push(code);
+  }
+}
+function codeLabel(c) { const i = CODE_INFO[c]; return i ? i.label : c; }
+function codeText(c)  { const i = CODE_INFO[c]; return i ? `${i.label} — ${i.en}` : c; }
+function codeTopic(c) { const i = CODE_INFO[c]; return i ? i.topic : '0'; }
+
+// In-memory data
+let questions = [];
+let fileMap = new Map();
+let loadedFolders = new Set();
+let tagDB = loadTags();
+let histDB = loadHistory();
+let currentModalIdx = -1;
+let visibleQuestions = [];
+let manualSelected = new Set();
+let modalContextList = [];
+let currentModalIsManual = false;
+let modalSubcodes = new Set();
+
+// ============================================================
+// PRESET TAG MERGE
+// ============================================================
+function mergePresetTags(force) {
+  const done = localStorage.getItem(PRESET_KEY);
+  if (!force && done === PRESET_VERSION) return 0;
+  let n = 0;
+  for (const [qid, t] of Object.entries(PRESET_TAGS)) {
+    const cur = tagDB[qid];
+    if (!force && cur && cur._user) continue;   // never clobber the teacher's own edit
+    tagDB[qid] = { ...t, topic: codeTopic(t.code), _preset: PRESET_VERSION };
+    n++;
+  }
+  localStorage.setItem(PRESET_KEY, PRESET_VERSION);
+  saveTags();
+  return n;
+}
+
+// ============================================================
+// IndexedDB helpers (for persisting folder handles)
+// ============================================================
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbPut(key, value) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGetAll() {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).openCursor();
+    const items = [];
+    req.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) { items.push({ key: cursor.key, value: cursor.value }); cursor.continue(); }
+      else resolve(items);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbDelete(key) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbClear() {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ============================================================
+// FILE LOADING (recursive — Paper1/2021/... subfolders supported)
+// ============================================================
+const hasFsApi = !!window.showDirectoryPicker && location.protocol !== 'file:';
+
+function setApiBadge() {
+  const el = document.getElementById('apiBadge');
+  if (hasFsApi) {
+    el.textContent = '✓ Persistent folders';
+    el.className = 'badge ok';
+    el.title = 'File System Access API available — folders are remembered across visits';
+  } else {
+    el.textContent = location.protocol === 'file:' ? 'file:// mode' : 'Compat mode';
+    el.className = 'badge warn';
+    el.title = 'Folders need to be re-selected each visit. Host on HTTPS (GitHub Pages) for persistence.';
+  }
+}
+
+async function loadFolder() {
+  if (hasFsApi) {
+    try {
+      const handle = await window.showDirectoryPicker({ id: 'ibAihlFolder', mode: 'read' });
+      await readFromHandle(handle);
+      try { await idbPut(handle.name, handle); } catch (e) { console.warn('Could not save folder handle:', e); }
+      refreshSavedFoldersList();
+    } catch (err) {
+      if (err.name !== 'AbortError') { console.error(err); alert('Could not load folder: ' + err.message); }
+    }
+  } else {
+    loadFolderInput();
+  }
+}
+
+async function collectPngs(handle, out, depth) {
+  if (depth > 4) return;
+  for await (const entry of handle.values()) {
+    if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.png')) {
+      out.push(await entry.getFile());
+    } else if (entry.kind === 'directory') {
+      await collectPngs(entry, out, depth + 1);
+    }
+  }
+}
+
+async function readFromHandle(handle) {
+  const perm = await handle.queryPermission?.({ mode: 'read' });
+  if (perm !== 'granted') {
+    const req = await handle.requestPermission?.({ mode: 'read' });
+    if (req !== 'granted') { alert('Permission to read the folder was not granted.'); return; }
+  }
+  const files = [];
+  await collectPngs(handle, files, 0);
+  if (files.length === 0) {
+    alert(`No PNG files found in "${handle.name}" (including subfolders).`);
+    return;
+  }
+  addFilesToBank(files, handle.name);
+}
+
+function loadFolderInput() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.webkitdirectory = true;
+  inp.multiple = true;
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', e => {
+    const files = [...e.target.files].filter(f => f.name.toLowerCase().endsWith('.png'));
+    if (files.length === 0) { alert('No PNG files found in the selected folder.'); inp.remove(); return; }
+    const folderName = files[0]?.webkitRelativePath?.split('/')[0] || 'folder';
+    addFilesToBank(files, folderName);
+    inp.remove();
+  });
+  inp.click();
+}
+
+function addFilesToBank(files, folderName) {
+  for (const f of files) fileMap.set(f.name, f);
+  loadedFolders.add(folderName);
+  rebuildQuestions();
+  updateLoadStatus();
+  refreshAll();
+}
+
+function updateLoadStatus() {
+  const n = fileMap.size;
+  const status = n
+    ? `Loaded ${n} files • ${questions.length} questions detected`
+    : 'No folders loaded yet — click "Load Folder" to begin';
+  document.getElementById('loadStatus').textContent = status;
+  document.getElementById('folderInfo').textContent = status;
+  const fl = document.getElementById('folderList');
+  fl.innerHTML = [...loadedFolders].map(name => `<span class="folder-tag">📁 ${escapeHtml(name)}</span>`).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+// ============================================================
+// AUTO-RESTORE on page load
+// ============================================================
+async function tryAutoRestore() {
+  if (!hasFsApi) return;
+  let saved;
+  try { saved = await idbGetAll(); } catch { return; }
+  if (!saved || saved.length === 0) return;
+
+  const banner = document.getElementById('restoreBanner');
+  const msg = document.getElementById('restoreMessage');
+  msg.innerHTML = `Saved folder${saved.length>1?'s':''}: <strong>${saved.map(s => escapeHtml(s.key)).join(', ')}</strong>. Click "Reload all" to grant access and load.`;
+  banner.classList.remove('hidden');
+
+  document.getElementById('btnRestoreAll').onclick = async () => {
+    for (const { key, value: handle } of saved) {
+      try {
+        const perm = await handle.queryPermission?.({ mode: 'read' });
+        let granted = perm === 'granted';
+        if (!granted) { const r = await handle.requestPermission?.({ mode: 'read' }); granted = r === 'granted'; }
+        if (!granted) { console.warn(`Permission denied for ${key}`); continue; }
+        await readFromHandle(handle);
+      } catch (e) { console.error('Restore failed for', key, e); }
+    }
+    banner.classList.add('hidden');
+  };
+  document.getElementById('btnForgetAll').onclick = async () => {
+    if (confirm('Forget all saved folders?')) {
+      await idbClear();
+      banner.classList.add('hidden');
+      refreshSavedFoldersList();
+    }
+  };
+}
+
+async function refreshSavedFoldersList() {
+  const div = document.getElementById('savedFoldersList');
+  if (!hasFsApi) { div.innerHTML = '<em>(Saved folders only available on HTTPS / GitHub Pages.)</em>'; return; }
+  let saved;
+  try { saved = await idbGetAll(); } catch { saved = []; }
+  if (saved.length === 0) { div.innerHTML = '<em>No saved folders.</em>'; return; }
+  div.innerHTML = saved.map(s =>
+    `<div class="folder-tag" style="margin:2px 0;">📁 ${escapeHtml(s.key)} <span class="x" data-key="${escapeHtml(s.key)}" title="Forget">×</span></div>`
+  ).join('');
+  div.querySelectorAll('.x').forEach(x => {
+    x.onclick = async () => { await idbDelete(x.dataset.key); refreshSavedFoldersList(); };
+  });
+}
+
+// ============================================================
+// PARSE FILENAMES
+// 2021May-AIHL-Paper1-TZ1-Q1.png
+// 2021Nov-AIHL-Paper1-Q1.png            (no TZ → TZ0)
+// 2022May-AIHL-Paper2-TZ1-Q1-p2.png     (multi-page question)
+// 2023May-AIHL-Paper1-TZ1-Q5MS-p2.png   (multi-page mark scheme)
+// ============================================================
+const FILE_RE = /^(\d{4})([A-Za-z]+)-AI(?:HL|SL)-(Paper\d)(?:-(TZ\d))?-Q(\d+)(?:-p?(\d+))?(MS)?(?:-p?(\d+))?$/i;
+
+function parseFilename(name) {
+  const base = name.replace(/\.png$/i, '');
+  const m = base.match(FILE_RE);
+  if (!m) return null;
+  const tz = m[4] ? m[4].toUpperCase() : 'TZ0';
+  return {
+    year: m[1], month: m[2], paper: m[3], tz, qnum: m[5],
+    part: parseInt(m[6] || m[8] || '1', 10),
+    isMs: !!m[7],
+    session: `${m[1]}${m[2]}-${m[3]}-${tz}`,
+    qid: `${m[1]}${m[2]}-${m[3]}-${tz}-Q${m[5]}`,
+    name
+  };
+}
+
+function rebuildQuestions() {
+  const map = new Map();
+  for (const fname of fileMap.keys()) {
+    const p = parseFilename(fname);
+    if (!p) continue;
+    if (!map.has(p.qid)) {
+      map.set(p.qid, {
+        id: p.qid, year: p.year, month: p.month, paper: p.paper, tz: p.tz, qnum: p.qnum,
+        session: p.session, qFiles: [], msFiles: []
+      });
+    }
+    const q = map.get(p.qid);
+    (p.isMs ? q.msFiles : q.qFiles).push({ name: fname, part: p.part });
+  }
+  questions = [...map.values()].map(q => {
+    q.qFiles.sort(sortByPart);
+    q.msFiles.sort(sortByPart);
+    q.displayName = `${q.year}${q.month} ${q.paper} ${q.tz === 'TZ0' ? '' : q.tz + ' '}Q${q.qnum}`.replace(/\s+/g, ' ').trim();
+    return q;
+  });
+  questions.sort((a, b) => {
+    if (a.year !== b.year) return a.year.localeCompare(b.year);
+    if (a.month !== b.month) return a.month.localeCompare(b.month);
+    if (a.paper !== b.paper) return a.paper.localeCompare(b.paper);
+    if (a.tz !== b.tz) return a.tz.localeCompare(b.tz);
+    return parseInt(a.qnum) - parseInt(b.qnum);
+  });
+}
+function sortByPart(a, b) { return (a.part || 0) - (b.part || 0); }
+
+// ============================================================
+// TAGS DB
+// ============================================================
+function loadTags() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveTags() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tagDB));
+  refreshTagPreview();
+}
+function getTag(qid) { return tagDB[qid] || {}; }
+function setTag(qid, fields) {
+  tagDB[qid] = { ...tagDB[qid], ...fields, _updated: Date.now(), _user: true };
+  if (fields.code !== undefined) tagDB[qid].topic = codeTopic(fields.code);
+  saveTags();
+}
+function tagCodes(qid, includeSub) {
+  const t = getTag(qid);
+  const out = [];
+  if (t.code) out.push(t.code);
+  if (includeSub && Array.isArray(t.subcodes)) for (const c of t.subcodes) if (!out.includes(c)) out.push(c);
+  return out;
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+function saveHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(histDB)); }
+
+// ============================================================
+// IMAGE BLOB URL CACHE
+// ============================================================
+const blobUrlCache = new Map();
+function blobUrlFor(filename) {
+  if (blobUrlCache.has(filename)) return blobUrlCache.get(filename);
+  const f = fileMap.get(filename);
+  if (!f) return null;
+  const u = URL.createObjectURL(f);
+  blobUrlCache.set(filename, u);
+  return u;
+}
+
+// ============================================================
+// SELECT POPULATION
+// ============================================================
+function topicOptionsHtml() {
+  return Object.keys(SYLLABUS).map(t => `<option value="${t}">${t} — ${SYLLABUS[t].en}</option>`).join('');
+}
+function codeOptionsHtml(filter) {
+  const f = filter || {};
+  let html = '';
+  for (const t of Object.keys(SYLLABUS)) {
+    if (f.topic && f.topic !== t) continue;
+    const items = SYLLABUS[t].items.filter(([c]) => !f.level || CODE_INFO[c].level === f.level);
+    if (!items.length) continue;
+    html += `<optgroup label="${t} — ${SYLLABUS[t].en}">`;
+    html += items.map(([c, en]) => `<option value="${c}">${CODE_INFO[c].label} — ${en}</option>`).join('');
+    html += `</optgroup>`;
+  }
+  return html;
+}
+
+function initSelects() {
+  document.getElementById('filterTopic').innerHTML =
+    `<option value="">All</option><option value="0">Untagged</option>` + topicOptionsHtml();
+  document.getElementById('modalTopic').innerHTML = `<option value="">-- not set --</option>` + topicOptionsHtml();
+  document.getElementById('subFilterTopic').innerHTML = `<option value="">全トピック</option>` + topicOptionsHtml();
+  document.getElementById('genTopics').innerHTML = topicOptionsHtml();
+  document.getElementById('genCodes').innerHTML = codeOptionsHtml();
+  document.getElementById('bulkCode').innerHTML = `<option value="">--</option>` + codeOptionsHtml();
+  refreshCodeFilter();
+  document.getElementById('presetCount').textContent = Object.keys(PRESET_TAGS).length;
+}
+
+function refreshCodeFilter() {
+  const sel = document.getElementById('filterCode');
+  const cur = sel.value;
+  const level = document.getElementById('filterLevel').value;
+  const topic = document.getElementById('filterTopic').value;
+  sel.innerHTML = `<option value="">All</option>` +
+    codeOptionsHtml({ level, topic: (topic === '0' ? '' : topic) });
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : '';
+}
+
+// ============================================================
+// RENDER STATS
+// ============================================================
+function renderStats() {
+  const total = questions.length;
+  let tagged = 0, marksKnown = 0;
+  const byTopic = {1:0,2:0,3:0,4:0,5:0};
+  for (const q of questions) {
+    const t = getTag(q.id);
+    if (t.code) { tagged++; byTopic[codeTopic(t.code)]++; }
+    if (t.marks) marksKnown++;
+  }
+  document.getElementById('statsBox').innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="lbl">Total questions</div></div>
+    <div class="stat"><div class="num" style="color:var(--green)">${tagged}</div><div class="lbl">Tagged</div></div>
+    <div class="stat"><div class="num" style="color:var(--orange)">${total-tagged}</div><div class="lbl">Untagged</div></div>
+    <div class="stat"><div class="num" style="color:var(--t1)">${byTopic[1]}</div><div class="lbl">T1 N&amp;A</div></div>
+    <div class="stat"><div class="num" style="color:var(--t2)">${byTopic[2]}</div><div class="lbl">T2 Func</div></div>
+    <div class="stat"><div class="num" style="color:var(--t3)">${byTopic[3]}</div><div class="lbl">T3 Geo&amp;Trig</div></div>
+    <div class="stat"><div class="num" style="color:var(--t4)">${byTopic[4]}</div><div class="lbl">T4 Stats&amp;Prob</div></div>
+    <div class="stat"><div class="num" style="color:var(--t5)">${byTopic[5]}</div><div class="lbl">T5 Calc</div></div>`;
+}
+
+// ============================================================
+// QUESTION BANK
+// ============================================================
+function applyFilter() {
+  const search  = document.getElementById('searchInput').value.trim().toLowerCase();
+  const fp      = document.getElementById('filterPaper').value;
+  const flevel  = document.getElementById('filterLevel').value;
+  const ftopic  = document.getElementById('filterTopic').value;
+  const fcode   = document.getElementById('filterCode').value;
+  const fy      = document.getElementById('filterYear').value;
+  const fm      = document.getElementById('filterMonth').value;
+  const ftz     = document.getElementById('filterTZ').value;
+  const inclSub = document.getElementById('inclSub').checked;
+
+  visibleQuestions = questions.filter(q => {
+    if (fp && q.paper !== fp) return false;
+    if (fy && q.year !== fy) return false;
+    if (fm && q.month !== fm) return false;
+    if (ftz && q.tz !== ftz) return false;
+
+    const t = getTag(q.id);
+    const codes = tagCodes(q.id, inclSub);
+
+    if (ftopic === '0') { if (t.code) return false; }
+    else if (ftopic)    { if (!codes.some(c => codeTopic(c) === ftopic)) return false; }
+
+    if (flevel && !codes.some(c => CODE_INFO[c] && CODE_INFO[c].level === flevel)) return false;
+    if (fcode  && !codes.includes(fcode)) return false;
+
+    if (search) {
+      const hay = [
+        q.displayName, q.id, t.note || '',
+        ...codes, ...codes.map(codeLabel), ...codes.map(c => (CODE_INFO[c] ? CODE_INFO[c].en + ' ' + CODE_INFO[c].ja : ''))
+      ].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  return visibleQuestions;
+}
+
+function renderBank() {
+  const list = applyFilter();
+  document.getElementById('resultCount').textContent = `${list.length} of ${questions.length} questions`;
+  const showImg = document.getElementById('showImg').checked;
+  const grid = document.getElementById('bankGrid');
+  if (questions.length === 0) {
+    grid.innerHTML = `<div style="color:var(--muted); padding:40px; text-align:center;">問題が読み込まれていません。上の「Load Folder」で IB-AIHL フォルダを選んでください。</div>`;
+    return;
+  }
+  grid.innerHTML = list.map((q, i) => qCardHtml(q, i, showImg)).join('');
+  grid.querySelectorAll('.qcard').forEach(el => {
+    el.onclick = () => openModal(visibleQuestions, parseInt(el.dataset.idx), false);
+  });
+}
+
+function chipHtml(code, isSub) {
+  const tp = codeTopic(code);
+  return `<span class="code-chip t${tp}${isSub ? ' sub' : ''}" title="${escapeHtml(codeText(code))}">${escapeHtml(codeLabel(code))}</span>`;
+}
+
+function qCardHtml(q, idx, showImg) {
+  const t = getTag(q.id);
+  const marks = t.marks ? `<span class="pill">${t.marks}m</span>` : '';
+  const diff  = t.difficulty ? `<span class="pill">${t.difficulty}</span>` : '';
+  const lowc  = t.confidence === 'low' ? `<span class="pill" style="background:#fef3c7;color:#92400e;" title="要確認">?</span>` : '';
+  const cls   = t.code ? '' : 'untagged';
+  const selected = manualSelected.has(q.id) ? 'selected' : '';
+  const thumb = showImg && q.qFiles[0] ? `<img src="${blobUrlFor(q.qFiles[0].name)}" loading="lazy">` : '';
+  const chips = t.code
+    ? chipHtml(t.code, false) + (t.subcodes || []).map(c => chipHtml(c, true)).join('')
+    : `<span class="topic-chip t0">untagged</span>`;
+  return `
+    <div class="qcard ${cls} ${selected}" data-idx="${idx}" data-qid="${escapeHtml(q.id)}">
+      <div class="qid">${escapeHtml(q.displayName)}</div>
+      <div class="meta">${q.qFiles.length} page(s) • MS: ${q.msFiles.length}</div>
+      ${thumb}
+      <div class="tags">${chips} ${marks} ${diff} ${lowc}</div>
+      ${t.note ? `<div class="note">${escapeHtml(t.note)}</div>` : ''}
+    </div>`;
+}
+
+// ============================================================
+// MODAL TAGGER
+// ============================================================
+function renderSubPicker() {
+  const topic = document.getElementById('subFilterTopic').value;
+  const primary = document.getElementById('modalCode').value;
+  const box = document.getElementById('subPicker');
+  const codes = ALL_CODES.filter(c => !topic || codeTopic(c) === topic);
+  box.innerHTML = codes.map(c => {
+    const on = modalSubcodes.has(c);
+    const tp = codeTopic(c);
+    const dim = (c === primary) ? 'opacity:0.35;' : '';
+    const style = on ? `background:var(--t${tp});` : '';
+    return `<span class="sub-opt ${on ? 'on t'+tp : ''}" data-code="${c}" style="${style}${dim}" title="${escapeHtml(codeText(c))}">${escapeHtml(codeLabel(c))}</span>`;
+  }).join('');
+  box.querySelectorAll('.sub-opt').forEach(el => {
+    el.onclick = () => {
+      const c = el.dataset.code;
+      if (modalSubcodes.has(c)) modalSubcodes.delete(c); else modalSubcodes.add(c);
+      renderSubPicker();
+    };
+  });
+  document.getElementById('subSelectedInfo').textContent =
+    modalSubcodes.size ? `選択中: ${[...modalSubcodes].map(codeLabel).join(', ')}` : '副タグなし';
+}
+
+function syncModalCodeSelect(keep) {
+  const topic = document.getElementById('modalTopic').value;
+  const sel = document.getElementById('modalCode');
+  const cur = keep !== undefined ? keep : sel.value;
+  sel.innerHTML = `<option value="">-- not set --</option>` + codeOptionsHtml({ topic });
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function openModal(list, idx, isManual = false) {
+  if (typeof list === 'number') { idx = list; list = visibleQuestions; isManual = false; }
+  modalContextList = list;
+  currentModalIdx = idx;
+  currentModalIsManual = isManual;
+  const q = list[idx];
+  if (!q) return;
+  const t = getTag(q.id);
+
+  document.getElementById('modalTitle').textContent = q.displayName + (isManual ? ' — Preview' : '');
+  document.getElementById('modalImgs').innerHTML = q.qFiles.map(f => `<img src="${blobUrlFor(f.name)}" alt="${escapeHtml(f.name)}">`).join('');
+
+  document.getElementById('modalTopic').value = t.code ? codeTopic(t.code) : '';
+  syncModalCodeSelect(t.code || '');
+  document.getElementById('modalMarks').value = t.marks || '';
+  document.getElementById('modalDifficulty').value = t.difficulty || '';
+  document.getElementById('modalNote').value = t.note || '';
+  modalSubcodes = new Set(t.subcodes || []);
+  document.getElementById('subFilterTopic').value = '';
+  renderSubPicker();
+
+  document.getElementById('modalToggleMS').textContent = 'Show MS';
+  document.getElementById('modalBg').classList.add('show');
+  updateAddButton();
+
+  if (isManual && q.msFiles.length) {
+    const ms = q.msFiles.map(f => `<img src="${blobUrlFor(f.name)}" class="ms-img">`).join('');
+    document.getElementById('modalImgs').innerHTML += '<hr><strong>Mark Scheme:</strong>' + ms;
+    document.getElementById('modalToggleMS').textContent = 'Hide MS';
+  }
+}
+
+function updateAddButton() {
+  const btn = document.getElementById('modalAddToSelection');
+  if (!currentModalIsManual) { btn.classList.add('hidden'); return; }
+  btn.classList.remove('hidden');
+  const q = modalContextList[currentModalIdx];
+  if (!q) return;
+  if (manualSelected.has(q.id)) {
+    btn.textContent = '✓ Selected — Remove';
+    btn.classList.remove('success'); btn.classList.add('danger');
+  } else {
+    btn.textContent = '＋ Add to Selection';
+    btn.classList.add('success'); btn.classList.remove('danger');
+  }
+}
+
+function toggleAddToSelection() {
+  if (currentModalIdx < 0) return;
+  const q = modalContextList[currentModalIdx];
+  if (!q) return;
+  if (manualSelected.has(q.id)) manualSelected.delete(q.id); else manualSelected.add(q.id);
+  updateAddButton();
+  renderSelectionTray();
+  renderManualPick();
+}
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  currentModalIdx = -1;
+}
+function saveCurrent() {
+  if (currentModalIdx < 0) return;
+  const q = modalContextList[currentModalIdx];
+  if (!q) return;
+  const code = document.getElementById('modalCode').value || null;
+  const subs = [...modalSubcodes].filter(c => c !== code);
+  setTag(q.id, {
+    code,
+    subcodes: subs,
+    marks: parseInt(document.getElementById('modalMarks').value) || null,
+    difficulty: document.getElementById('modalDifficulty').value || null,
+    note: document.getElementById('modalNote').value || null,
+    confidence: 'high'
+  });
+  refreshAll();
+  const btn = document.getElementById('modalSave');
+  if (btn && !btn.dataset.busy) {
+    btn.dataset.busy = '1';
+    const orig = btn.textContent;
+    btn.textContent = '✓ Saved!';
+    btn.style.background = '#059669';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; delete btn.dataset.busy; }, 900);
+  }
+}
+
+function printSingleQuestion() {
+  if (currentModalIdx < 0) return;
+  const q = modalContextList[currentModalIdx];
+  if (!q) return;
+  const t = getTag(q.id);
+  const includeMS = confirm(`Print "${q.displayName}"?\n\nOK = Question + Mark Scheme\nCancel = Question only`);
+  const qImgs = q.qFiles.map(f => `<img src="${blobUrlFor(f.name)}">`).join('');
+  const msImgs = includeMS ? q.msFiles.map(f => `<img src="${blobUrlFor(f.name)}">`).join('') : '';
+  const win = window.open('', '_blank');
+  if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site and try again.'); return; }
+  const title = `${q.displayName} — ${t.marks || '?'} marks (${t.code ? codeLabel(t.code) : 'untagged'})`;
+  win.document.open();
+  win.document.write(
+`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${title}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 20px; color: #222; }
+  h2 { font-size: 15px; margin: 8px 0 12px; padding-bottom: 4px; border-bottom: 1px solid #ccc; }
+  img { max-width: 100%; display: block; margin: 0 auto 12px; page-break-inside: avoid; }
+  .page-break { page-break-before: always; }
+  @page { margin: 15mm; }
+  @media print { body { margin: 0; } h2 { border: none; } }
+</style></head>
+<body>
+  <h2>${title}</h2>
+  ${qImgs}
+  ${msImgs ? `<div class="page-break"></div><h2>Mark Scheme — ${q.displayName}</h2>${msImgs}` : ''}
+  <script>
+    window.addEventListener('load', function() {
+      var imgs = document.querySelectorAll('img');
+      if (imgs.length === 0) { setTimeout(function(){ window.print(); }, 200); return; }
+      var loaded = 0;
+      function done() { loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 300); }
+      imgs.forEach(function(img) { if (img.complete) done(); else { img.onload = done; img.onerror = done; } });
+    });
+  <\/script>
+</body></html>`
+  );
+  win.document.close();
+}
+
+function navModal(delta) {
+  saveCurrent();
+  const next = currentModalIdx + delta;
+  if (next >= 0 && next < modalContextList.length) openModal(modalContextList, next, currentModalIsManual);
+  else closeModal();
+}
+function toggleMS() {
+  if (currentModalIdx < 0) return;
+  const q = modalContextList[currentModalIdx];
+  if (!q) return;
+  const btn = document.getElementById('modalToggleMS');
+  if (btn.textContent === 'Hide MS') {
+    document.getElementById('modalImgs').innerHTML = q.qFiles.map(f => `<img src="${blobUrlFor(f.name)}">`).join('');
+    btn.textContent = 'Show MS';
+  } else {
+    const ms = q.msFiles.map(f => `<img src="${blobUrlFor(f.name)}" class="ms-img">`).join('') || '<em>(no MS)</em>';
+    document.getElementById('modalImgs').innerHTML += '<hr><strong>Mark Scheme:</strong>' + ms;
+    btn.textContent = 'Hide MS';
+  }
+}
+
+// ============================================================
+// GENERATE TEST
+// ============================================================
+function genMatches(q) {
+  const t = getTag(q.id);
+  if (!t.code || !t.marks) return false;
+  const inclSub = document.getElementById('genInclSub').checked;
+  const codes = tagCodes(q.id, inclSub);
+  const paperFilter = document.getElementById('genPaper').value;
+  const level = document.getElementById('genLevel').value;
+  const selTopics = [...document.getElementById('genTopics').selectedOptions].map(o => o.value);
+  const selCodes  = [...document.getElementById('genCodes').selectedOptions].map(o => o.value);
+  const yearFrom = document.getElementById('genYearFrom').value;
+  const yearTo   = document.getElementById('genYearTo').value;
+  if (paperFilter && q.paper !== paperFilter) return false;
+  if (yearFrom && q.year < yearFrom) return false;
+  if (yearTo && q.year > yearTo) return false;
+  if (level && !codes.some(c => CODE_INFO[c] && CODE_INFO[c].level === level)) return false;
+  if (selCodes.length) { if (!codes.some(c => selCodes.includes(c))) return false; }
+  else if (selTopics.length) { if (!codes.some(c => selTopics.includes(codeTopic(c)))) return false; }
+  return true;
+}
+
+function generateTest() {
+  const targetMarks = parseInt(document.getElementById('targetMarks').value) || 40;
+  const mode = document.getElementById('genMode').value;
+  const sortBy = document.getElementById('genSort').value;
+  const avoidDup = document.getElementById('avoidDup').checked;
+  const includeMS = document.getElementById('includeMS').checked;
+
+  let candidates;
+  if (mode === 'manual') {
+    candidates = questions.filter(q => manualSelected.has(q.id));
+  } else {
+    candidates = questions.filter(q => {
+      if (!genMatches(q)) return false;
+      if (avoidDup) {
+        const lastUsed = histDB.find(h => h.qid === q.id);
+        if (lastUsed && (Date.now() - lastUsed.time) < 30*24*3600*1000) return false;
+      }
+      return true;
+    });
+    candidates = shuffle(candidates);
+    const picked = [];
+    let total = 0;
+    for (const c of candidates) {
+      const m = getTag(c.id).marks;
+      if (total + m <= targetMarks * 1.15) {
+        picked.push(c); total += m;
+        if (total >= targetMarks * 0.95) break;
+      }
+    }
+    candidates = picked;
+  }
+  if (candidates.length === 0) { alert('条件に合う問題がありません。フィルタを緩めてください。'); return; }
+
+  candidates = sortQuestions(candidates, sortBy);
+  const now = Date.now();
+  for (const c of candidates) {
+    histDB = histDB.filter(h => h.qid !== c.id);
+    histDB.unshift({ qid: c.id, time: now });
+  }
+  if (histDB.length > 500) histDB = histDB.slice(0, 500);
+  saveHistory();
+  renderGenOutput(candidates, includeMS);
+}
+
+function codeOrder(code) { const i = ALL_CODES.indexOf(code); return i < 0 ? 999 : i; }
+
+function sortQuestions(arr, mode) {
+  const cp = [...arr];
+  if (mode === 'topic')           cp.sort((a,b) => codeOrder(getTag(a.id).code) - codeOrder(getTag(b.id).code));
+  else if (mode === 'marks-asc')  cp.sort((a,b) => (getTag(a.id).marks||0) - (getTag(b.id).marks||0));
+  else if (mode === 'marks-desc') cp.sort((a,b) => (getTag(b.id).marks||0) - (getTag(a.id).marks||0));
+  else if (mode === 'random')     return shuffle(cp);
+  return cp;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function renderGenOutput(list, includeMS) {
+  const out = document.getElementById('genOutput');
+  out.classList.remove('hidden');
+  const title = document.getElementById('testTitle').value || 'IB Math AI HL — Test';
+  const date = document.getElementById('testDate').value || new Date().toISOString().slice(0,10);
+  let totalMarks = 0;
+  list.forEach(q => totalMarks += (getTag(q.id).marks||0));
+  let html = `<h2>${escapeHtml(title)}</h2>
+    <p>Date: ${date} | Total marks: <strong>${totalMarks}</strong> | ${list.length} questions</p><hr>`;
+  list.forEach((q, i) => {
+    const t = getTag(q.id);
+    html += `<div class="qbox-print"><strong>${i+1}.</strong> [${t.marks||'?'} marks] <span class="small">(${escapeHtml(q.displayName)} | ${t.code ? escapeHtml(codeLabel(t.code)) : '?'})</span><br>`;
+    q.qFiles.forEach(f => { html += `<img src="${blobUrlFor(f.name)}" alt="">`; });
+    html += `</div>`;
+  });
+  if (includeMS) {
+    html += `<div class="page-break"></div><h2>Mark Scheme</h2><hr>`;
+    list.forEach((q, i) => {
+      html += `<div class="qbox-print"><strong>${i+1}.</strong> ${escapeHtml(q.displayName)}<br>`;
+      q.msFiles.forEach(f => { html += `<img src="${blobUrlFor(f.name)}" alt="">`; });
+      if (q.msFiles.length === 0) html += `<em>(no MS file)</em>`;
+      html += `</div>`;
+    });
+  }
+  out.innerHTML = html;
+  out.scrollIntoView({ behavior: 'smooth' });
+}
+
+let currentManualList = [];
+
+function renderManualPick() {
+  const grid = document.getElementById('manualGrid');
+  if (!grid) return;
+  const list = questions.filter(genMatches);
+  currentManualList = list;
+  grid.innerHTML = list.map((q, i) => qCardHtml(q, i, true)).join('');
+  grid.querySelectorAll('.qcard').forEach(el => {
+    el.onclick = () => openModal(currentManualList, parseInt(el.dataset.idx), true);
+  });
+  renderSelectionTray();
+}
+
+function renderSelectionTray() {
+  const list = document.getElementById('selectedList');
+  const count = document.getElementById('selectionCount');
+  const marksSpan = document.getElementById('selectionMarks');
+  if (!list) return;
+  const selected = [...manualSelected].map(id => questions.find(q => q.id === id)).filter(Boolean);
+  count.textContent = `${selected.length} selected`;
+  let totalMarks = 0;
+  selected.forEach(q => totalMarks += (getTag(q.id).marks || 0));
+  marksSpan.textContent = totalMarks ? `• ${totalMarks} marks total` : '';
+  if (selected.length === 0) {
+    list.innerHTML = `<span class="small" id="selectedEmpty">No questions selected yet — click any question below to preview and add.</span>`;
+    return;
+  }
+  list.innerHTML = selected.map(q => {
+    const t = getTag(q.id);
+    return `<span class="folder-tag" style="background:#ede9fe;">
+      <strong>${escapeHtml(q.displayName)}</strong>
+      <span class="pill" style="background:var(--t${t.code?codeTopic(t.code):0}); color:#fff;">${t.code?escapeHtml(codeLabel(t.code)):'?'} ${t.marks||'?'}m</span>
+      <span class="x" data-qid="${escapeHtml(q.id)}" title="Remove">×</span>
+    </span>`;
+  }).join('');
+  list.querySelectorAll('.x').forEach(x => {
+    x.onclick = (e) => {
+      e.stopPropagation();
+      manualSelected.delete(x.dataset.qid);
+      renderSelectionTray();
+      renderManualPick();
+    };
+  });
+}
+
+function generateFromSelection() {
+  const selected = [...manualSelected].map(id => questions.find(q => q.id === id)).filter(Boolean);
+  if (selected.length === 0) { alert('Selection is empty. Click questions below to add them to the tray first.'); return; }
+  const sortBy = document.getElementById('genSort').value;
+  const sorted = sortQuestions(selected, sortBy);
+  const title = document.getElementById('testTitle').value || 'IB Math AI HL — Practice Test';
+  const date = document.getElementById('testDate').value || new Date().toISOString().slice(0,10);
+  let totalMarks = 0;
+  sorted.forEach(q => totalMarks += (getTag(q.id).marks || 0));
+
+  const qBookletTitle = escapeHtml(title);
+  let qBooklet = `<div class="cover">
+    <h1>${qBookletTitle}</h1>
+    <p class="cover-meta">Date: ${escapeHtml(date)}<br>Total marks: <strong>${totalMarks}</strong><br>Number of questions: <strong>${sorted.length}</strong></p>
+    <p class="cover-note">Answer all questions. Full working must be shown to receive marks.</p>
+  </div>`;
+  sorted.forEach((q, i) => {
+    const t = getTag(q.id);
+    qBooklet += `<div class="qbox">
+      <h3>Question ${i+1}. [Maximum mark: ${t.marks || '?'}]</h3>
+      ${q.qFiles.map(f => `<img src="${blobUrlFor(f.name)}">`).join('')}
+    </div>`;
+  });
+
+  let msBooklet = `<div class="cover">
+    <h1>Mark Scheme</h1>
+    <p class="cover-meta">${qBookletTitle}<br>Date: ${escapeHtml(date)}<br>${sorted.length} questions • ${totalMarks} marks</p>
+  </div>`;
+  sorted.forEach((q, i) => {
+    const t = getTag(q.id);
+    msBooklet += `<div class="qbox">
+      <h3>Question ${i+1} — Mark Scheme <span style="font-weight:normal;font-size:12px;color:#666;">(${escapeHtml(q.displayName)}${t.code ? ' · ' + escapeHtml(codeLabel(t.code)) : ''})</span></h3>
+      ${q.msFiles.length ? q.msFiles.map(f => `<img src="${blobUrlFor(f.name)}">`).join('') : '<em style="color:#888;">(no mark scheme file available)</em>'}
+    </div>`;
+  });
+
+  const win = window.open('', '_blank');
+  if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site and try again.'); return; }
+  win.document.open();
+  win.document.write(
+`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${qBookletTitle}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif; margin: 20px; color: #222; }
+  .cover { text-align: center; padding: 120px 40px; page-break-after: always; }
+  .cover h1 { font-size: 26px; margin: 0 0 30px; letter-spacing: 0.5px; }
+  .cover-meta { font-size: 14px; line-height: 2; }
+  .cover-note { font-size: 12px; color:#666; margin-top: 40px; font-style: italic; }
+  .qbox { page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; }
+  .qbox h3 { font-size: 14px; margin: 10px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ccc; }
+  img { max-width: 100%; display: block; margin: 0 auto 10px; page-break-inside: avoid; }
+  .booklet-break { page-break-before: always; }
+  @page { margin: 15mm; }
+  @media print { body { margin: 0; } .qbox h3 { border-color: #999; } }
+</style></head>
+<body>
+  ${qBooklet}
+  <div class="booklet-break"></div>
+  ${msBooklet}
+  <script>
+    window.addEventListener('load', function() {
+      var imgs = document.querySelectorAll('img');
+      if (imgs.length === 0) { setTimeout(function(){ window.print(); }, 200); return; }
+      var loaded = 0;
+      function done() { loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 500); }
+      imgs.forEach(function(img) { if (img.complete) done(); else { img.onload = done; img.onerror = done; } });
+    });
+  <\/script>
+</body></html>`
+  );
+  win.document.close();
+}
+
+// ============================================================
+// COVERAGE TAB
+// ============================================================
+function renderCoverage() {
+  const level = document.getElementById('covLevel').value;
+  const inclSub = document.getElementById('covInclSub').checked;
+  const hideZero = document.getElementById('covHideZero').checked;
+  const counts = {};
+  for (const c of ALL_CODES) counts[c] = 0;
+  const src = questions.length ? questions.map(q => q.id) : Object.keys(PRESET_TAGS);
+  for (const qid of src) for (const c of tagCodes(qid, inclSub)) if (counts[c] !== undefined) counts[c]++;
+
+  let covered = 0, totalCodes = 0;
+  let html = '';
+  for (const t of Object.keys(SYLLABUS)) {
+    const items = SYLLABUS[t].items.filter(([c]) => !level || CODE_INFO[c].level === level);
+    if (!items.length) continue;
+    let rows = '';
+    for (const [c, en, ja] of items) {
+      totalCodes++;
+      if (counts[c] > 0) covered++;
+      if (hideZero && counts[c] === 0) continue;
+      rows += `<tr class="${counts[c] ? '' : 'zero'}">
+        <td><strong>${escapeHtml(codeLabel(c))}</strong></td>
+        <td>${escapeHtml(ja)}<div class="small">${escapeHtml(en)}</div></td>
+        <td class="n">${counts[c]}</td></tr>`;
+    }
+    html += `<div><h3 style="font-size:14px;margin:0 0 6px;"><span class="topic-chip t${t}">${t}</span> ${SYLLABUS[t].en} / ${SYLLABUS[t].ja}</h3>
+      <table class="cov"><thead><tr><th>Code</th><th>内容</th><th class="n">問数</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  document.getElementById('covTables').innerHTML = html;
+  document.getElementById('covSummary').textContent =
+    `${covered} / ${totalCodes} 項目に問題あり（${src.length} 問を集計）`;
+}
+
+// ============================================================
+// BULK TAG / IMPORT / EXPORT
+// ============================================================
+function bulkApply() {
+  const pat = document.getElementById('bulkPattern').value.trim();
+  const c = document.getElementById('bulkCode').value;
+  const m = document.getElementById('bulkMarks').value;
+  if (!pat) { alert('Enter a pattern first'); return; }
+  if (!c && !m) { alert('Enter a syllabus code or marks'); return; }
+  let n = 0;
+  for (const q of questions) {
+    if (q.id.includes(pat) || q.displayName.includes(pat)) {
+      const fields = {};
+      if (c) fields.code = c;
+      if (m) fields.marks = parseInt(m);
+      setTag(q.id, fields);
+      n++;
+    }
+  }
+  alert(`Updated ${n} question(s).`);
+  refreshAll();
+}
+function bulkPreview() {
+  const pat = document.getElementById('bulkPattern').value.trim();
+  if (!pat) { document.getElementById('bulkPreview').textContent = ''; return; }
+  const matched = questions.filter(q => q.id.includes(pat) || q.displayName.includes(pat));
+  document.getElementById('bulkPreview').textContent = `${matched.length} match(es)`;
+}
+function exportTags() {
+  const blob = new Blob([JSON.stringify(tagDB, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ib_aihl_tags_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+function importTags() {
+  const inp = document.getElementById('importFile');
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (confirm(`Import ${Object.keys(data).length} tag entries? (Will merge with existing tags.)`)) {
+          tagDB = { ...tagDB, ...data };
+          saveTags(); refreshAll();
+          alert('Imported.');
+        }
+      } catch (err) { alert('Invalid JSON: ' + err.message); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function clearTags() {
+  if (!confirm('全てのタグを削除しますか？（プリセットも消えます。Reset to preset で戻せます）')) return;
+  tagDB = {}; localStorage.removeItem(PRESET_KEY); saveTags(); refreshAll();
+}
+function resetPreset() {
+  if (!confirm('プリセットのタグで上書きしますか？ あなたが手で編集したタグも元に戻ります。')) return;
+  const n = mergePresetTags(true);
+  refreshAll();
+  alert(`${n} 問をプリセットに戻しました。`);
+}
+function exportHist() {
+  const blob = new Blob([JSON.stringify(histDB, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ib_aihl_history_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+function clearHist() {
+  if (!confirm('Clear all history?')) return;
+  histDB = []; saveHistory(); refreshAll();
+}
+function refreshTagPreview() {
+  const keys = Object.keys(tagDB);
+  const el = document.getElementById('tagPreview');
+  if (!el) return;
+  el.textContent =
+    `${keys.length} entries\n\n` +
+    keys.slice(0, 40).map(k => `${k}: ${tagDB[k].code||'-'}${(tagDB[k].subcodes||[]).length?' (+'+tagDB[k].subcodes.join(', ')+')':''} ${tagDB[k].marks||'-'}m`).join('\n') +
+    (keys.length > 40 ? `\n... (+${keys.length-40} more)` : '');
+  const hp = document.getElementById('histPreview');
+  if (hp) hp.innerHTML = `${histDB.length} entries. ${histDB.length ? 'Latest: ' + new Date(histDB[0].time).toLocaleString() : ''}`;
+}
+
+function refreshSessionFilters() {
+  const years  = [...new Set(questions.map(q => q.year))].sort();
+  const months = [...new Set(questions.map(q => q.month))].sort();
+  const tzs    = [...new Set(questions.map(q => q.tz))].sort();
+  const fy = document.getElementById('filterYear');
+  const yf = document.getElementById('genYearFrom');
+  const yt = document.getElementById('genYearTo');
+  for (const sel of [fy, yf, yt]) {
+    const cur = sel.value;
+    const first = sel === fy ? '<option value="">All</option>' : `<option value="">${sel===yf?'From':'To'}</option>`;
+    sel.innerHTML = first + years.map(y => `<option value="${y}">${y}</option>`).join('');
+    sel.value = cur;
+  }
+  const fm = document.getElementById('filterMonth');
+  const curM = fm.value;
+  fm.innerHTML = '<option value="">All</option>' + months.map(m => `<option value="${m}">${m}</option>`).join('');
+  fm.value = curM;
+  const ftz = document.getElementById('filterTZ');
+  const curT = ftz.value;
+  ftz.innerHTML = '<option value="">All</option>' + tzs.map(t => `<option value="${t}">${t === 'TZ0' ? '(no TZ)' : t}</option>`).join('');
+  ftz.value = curT;
+}
+
+function refreshAll() {
+  refreshSessionFilters();
+  renderStats();
+  renderBank();
+  refreshTagPreview();
+  if (!document.getElementById('tab-coverage').classList.contains('hidden')) renderCoverage();
+  if (!document.getElementById('tab-generate').classList.contains('hidden')) {
+    if (document.getElementById('genMode').value === 'manual') renderManualPick();
+  }
+}
+
+// ============================================================
+// EVENT WIRING
+// ============================================================
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-' + t.dataset.tab).classList.remove('hidden');
+    if (t.dataset.tab === 'generate') {
+      const isManual = document.getElementById('genMode').value === 'manual';
+      document.getElementById('manualPickPanel').classList.toggle('hidden', !isManual);
+      if (isManual) renderManualPick();
+    } else if (t.dataset.tab === 'settings') {
+      refreshSavedFoldersList();
+    } else if (t.dataset.tab === 'coverage') {
+      renderCoverage();
+    }
+  };
+});
+
+document.getElementById('btnLoad').onclick = loadFolder;
+
+['searchInput','filterPaper','filterYear','filterMonth','filterTZ','showImg','inclSub','filterCode'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderBank);
+  document.getElementById(id).addEventListener('change', renderBank);
+});
+['filterLevel','filterTopic'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { refreshCodeFilter(); renderBank(); });
+});
+
+document.getElementById('modalTopic').onchange = () => { syncModalCodeSelect(''); };
+document.getElementById('modalCode').onchange = () => { renderSubPicker(); };
+document.getElementById('subFilterTopic').onchange = renderSubPicker;
+
+document.getElementById('modalClose').onclick = closeModal;
+document.getElementById('modalSave').onclick = saveCurrent;
+document.getElementById('modalNext').onclick = () => navModal(1);
+document.getElementById('modalPrev').onclick = () => navModal(-1);
+document.getElementById('modalToggleMS').onclick = toggleMS;
+document.getElementById('modalPrint').onclick = printSingleQuestion;
+document.getElementById('modalAddToSelection').onclick = toggleAddToSelection;
+document.getElementById('modalBg').onclick = e => { if (e.target.id === 'modalBg') closeModal(); };
+
+document.getElementById('btnGenPdfFromSelection').onclick = generateFromSelection;
+document.getElementById('btnClearSelection').onclick = () => {
+  if (manualSelected.size === 0) return;
+  if (confirm(`Clear all ${manualSelected.size} selected question(s)?`)) {
+    manualSelected.clear(); renderSelectionTray(); renderManualPick();
+  }
+};
+
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('modalBg').classList.contains('show')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Escape') closeModal();
+  else if (e.key === 'ArrowRight') navModal(1);
+  else if (e.key === 'ArrowLeft') navModal(-1);
+  else if (['1','2','3','4','5'].includes(e.key)) {
+    document.getElementById('modalTopic').value = e.key;
+    syncModalCodeSelect('');
+  } else if (e.key.toLowerCase() === 's') { e.preventDefault(); saveCurrent(); }
+  else if (e.key.toLowerCase() === 'm') { toggleMS(); }
+  else if (e.key.toLowerCase() === 'p') { e.preventDefault(); printSingleQuestion(); }
+  else if (e.key.toLowerCase() === 'a' && currentModalIsManual) { e.preventDefault(); toggleAddToSelection(); }
+});
+
+document.getElementById('btnGenerate').onclick = generateTest;
+document.getElementById('btnPrint').onclick = () => window.print();
+document.getElementById('btnClear').onclick = () => {
+  document.getElementById('genOutput').classList.add('hidden');
+  document.getElementById('genOutput').innerHTML = '';
+  manualSelected.clear();
+  if (document.getElementById('genMode').value === 'manual') renderManualPick();
+};
+document.getElementById('genMode').onchange = e => {
+  const isManual = e.target.value === 'manual';
+  document.getElementById('manualPickPanel').classList.toggle('hidden', !isManual);
+  if (isManual) renderManualPick();
+};
+['genPaper','genLevel','genTopics','genCodes','genYearFrom','genYearTo','genInclSub'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (document.getElementById('genMode').value === 'manual') renderManualPick();
+  });
+});
+
+['covLevel','covInclSub','covHideZero'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderCoverage);
+});
+
+document.getElementById('btnExportTags').onclick = exportTags;
+document.getElementById('btnImportTags').onclick = importTags;
+document.getElementById('btnClearTags').onclick = clearTags;
+document.getElementById('btnResetPreset').onclick = resetPreset;
+document.getElementById('btnExportHist').onclick = exportHist;
+document.getElementById('btnClearHist').onclick = clearHist;
+document.getElementById('btnClearFolderHandles').onclick = async () => {
+  if (confirm('Forget all saved folder shortcuts?')) { await idbClear(); refreshSavedFoldersList(); }
+};
+
+document.getElementById('bulkPattern').oninput = bulkPreview;
+document.getElementById('btnBulkApply').onclick = bulkApply;
+
+document.getElementById('testDate').valueAsDate = new Date();
+
+// Init
+initSelects();
+mergePresetTags(false);
+setApiBadge();
+updateLoadStatus();
+refreshAll();
+tryAutoRestore();
+refreshSavedFoldersList();
+</script>
+</body>
+</html>
