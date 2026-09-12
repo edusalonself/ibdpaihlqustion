@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IB Math AI HL — Test Paper Generator</title>
+<title>IB Math AI HL / SL — Test Paper Generator</title>
 <style>
   :root {
     --bg: #f5f7fa;
@@ -54,6 +54,9 @@
   .t0 { background: #999; }
   .code-chip { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; color:#fff; letter-spacing:0.2px; }
   .code-chip.sub { opacity: 0.55; font-weight:600; }
+  .course-chip { display:inline-block; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800; letter-spacing:0.4px; }
+  .course-HL { background:#4c1d95; color:#fff; }
+  .course-SL { background:#0e7490; color:#fff; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
   .qcard { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: pointer; transition: transform 0.1s; }
   .qcard:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
@@ -111,7 +114,7 @@
 <body>
 
 <header>
-  <h1>IB Math AI HL — Past Paper Test Generator</h1>
+  <h1>IB Math AI HL / SL — Past Paper Test Generator</h1>
   <div class="subtitle" id="loadStatus">Initializing…</div>
 </header>
 
@@ -142,8 +145,9 @@
     </div>
     <div class="folder-list" id="folderList"></div>
     <div class="help-box" style="margin-top:12px;">
-      <strong>使い方：</strong>「Load Folder」で <code>IB-AIHL</code> フォルダ（Paper1 / Paper2 のサブフォルダごと）を選んでください。サブフォルダは自動で読み込みます。
+      <strong>使い方：</strong>「Load Folder」で <code>_normalized</code> フォルダを選んでください（中の <code>AIHL</code> と <code>AISL</code> を一度に読み込みます）。サブフォルダは4階層まで自動でたどります。
       ブラウザがフォルダを記憶するので、次回からは「Reload all」を押すだけです。
+      <br><span class="small">※ <code>_</code> で始まるフォルダは親フォルダを選んだときには読み飛ばします（同じ問題の二重読み込み防止）。正規化前の画像を使いたいときは <code>Paper1</code> などを直接選んでください。</span>
       <br><strong>タグ：</strong> 全 <strong id="presetCount">0</strong> 問にシラバス項目（SL/AHL コード）・配点がプリセット済みです。問題をクリックすると拡大表示され、その場で修正できます。
       <br><kbd>1</kbd>–<kbd>5</kbd> トピック、<kbd>→</kbd>/<kbd>←</kbd> 移動、<kbd>S</kbd> 保存、<kbd>M</kbd> 解答表示、<kbd>Esc</kbd> 閉じる
     </div>
@@ -162,6 +166,9 @@
   <div class="panel">
     <div class="filter-bar">
       <label>Search: <input id="searchInput" placeholder="e.g. 2023May TZ1 Q5 / Markov / AHL4.19" style="width:220px"></label>
+      <label>Course:
+        <select id="filterCourse"><option value="">All</option><option value="AIHL">AI HL</option><option value="AISL">AI SL</option></select>
+      </label>
       <label>Paper:
         <select id="filterPaper"><option value="">All</option><option value="Paper1">Paper 1</option><option value="Paper2">Paper 2</option></select>
       </label>
@@ -204,6 +211,9 @@
       <label>Total marks (target): <input id="targetMarks" type="number" value="40" min="1" max="300" style="width:80px"></label>
     </div>
     <div class="row" style="margin-top:8px">
+      <label>Course:
+        <select id="genCourse"><option value="">Any</option><option value="AIHL">AI HL</option><option value="AISL">AI SL</option></select>
+      </label>
       <label>Paper type:
         <select id="genPaper"><option value="">Any</option><option value="Paper1">Paper 1 only</option><option value="Paper2">Paper 2 only</option></select>
       </label>
@@ -280,6 +290,7 @@
   <div class="panel">
     <h2>Syllabus Coverage — どの項目に何問あるか</h2>
     <div class="row">
+      <label>Course: <select id="covCourse"><option value="">All</option><option value="AIHL">AI HL</option><option value="AISL">AI SL</option></select></label>
       <label>Level: <select id="covLevel"><option value="">All</option><option value="SL">SL</option><option value="AHL">AHL</option></select></label>
       <label><input type="checkbox" id="covInclSub" checked> 副タグも数える</label>
       <label><input type="checkbox" id="covHideZero"> 0件の項目を隠す</label>
@@ -302,6 +313,17 @@
       <button id="btnClearTags" class="danger">🗑 Clear all tags</button>
     </div>
     <pre id="tagPreview" style="background:#f8fafc; padding:10px; border-radius:6px; max-height:220px; overflow:auto; font-size:11px; margin-top:10px;"></pre>
+  </div>
+
+  <div class="panel">
+    <h2>印刷スケール</h2>
+    <p class="small">画像の「1mmあたりのピクセル数」。正規化済み画像（<code>_normalized</code>）はすべて同じ縮尺なので、この値で実寸印刷されます。文字が大きすぎ／小さすぎる場合だけ調整してください。</p>
+    <div class="row">
+      <label>px / mm: <input id="ppmInput" type="number" step="0.1" min="2" max="30" style="width:90px"></label>
+      <button id="btnSavePpm" class="secondary">保存</button>
+      <button id="btnResetPpm" class="secondary">既定値に戻す (7.876)</button>
+      <span class="small" id="ppmNote"></span>
+    </div>
   </div>
 
   <div class="panel">
@@ -399,6 +421,30 @@ const HISTORY_KEY  = 'ibAihl_history_v1';
 const PRESET_KEY   = 'ibAihl_presetVersion';
 const IDB_NAME     = 'ibAihlDB';
 const IDB_STORE    = 'folderHandles';
+const PPM_KEY      = 'ibAihl_pxPerMm';
+
+// Pixels per millimetre of the normalized question images.
+// The IB A4 page renders at 1654 px wide = 210 mm  →  7.876 px/mm.
+// Images are printed at this scale so HL and SL come out at identical text size.
+const DEFAULT_PX_PER_MM = 7.876;
+const MAX_IMG_MM = 186;            // printable width inside 12 mm A4 margins
+function pxPerMm() {
+  const v = parseFloat(localStorage.getItem(PPM_KEY));
+  return (v && v > 1) ? v : DEFAULT_PX_PER_MM;
+}
+// Size every image by its own pixel width so all questions share one text scale.
+function sizeImagesMm(root, ppm) {
+  const p = ppm || pxPerMm();
+  root.querySelectorAll('img').forEach(img => {
+    const apply = () => {
+      if (!img.naturalWidth) return;
+      img.style.width = Math.min(img.naturalWidth / p, MAX_IMG_MM) + 'mm';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+    };
+    if (img.complete) apply(); else img.addEventListener('load', apply, { once: true });
+  });
+}
 
 // ============================================================
 // IB Mathematics: Applications & Interpretation HL — Syllabus master
@@ -510,338 +556,514 @@ const SYLLABUS = {
   }
 };
 
-const PRESET_VERSION = '2026-09-12a';
+const PRESET_VERSION = '2026-09-12c';
 const PRESET_TAGS = {
-  "2021May-Paper1-TZ1-Q1": {"code": "AHL4.17", "subcodes": [], "marks": 4, "note": "Poisson probability, scaled mean"},
-  "2021May-Paper1-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 6, "note": "Voronoi diagram, edge gradient"},
-  "2021May-Paper1-TZ1-Q3": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.8"], "marks": 8, "note": "Arithmetic versus geometric sequences"},
-  "2021May-Paper1-TZ1-Q4": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.6"], "marks": 6, "note": "Exponential decay model, domain"},
-  "2021May-Paper1-TZ1-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 6, "note": "Vector cross product, triangle area"},
-  "2021May-Paper1-TZ1-Q6": {"code": "SL1.6", "subcodes": ["SL3.2"], "marks": 5, "note": "Upper bounds, maximum triangle area"},
-  "2021May-Paper1-TZ1-Q7": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6"], "marks": 8, "note": "Optimisation of gift box area"},
-  "2021May-Paper1-TZ1-Q8": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 7, "note": "Discrete distribution, expected score"},
-  "2021May-Paper1-TZ1-Q9": {"code": "AHL1.12", "subcodes": ["AHL1.13"], "marks": 8, "note": "Complex numbers as Argand transformations"},
-  "2021May-Paper1-TZ1-Q10": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Prim's algorithm, TSP lower bound"},
-  "2021May-Paper1-TZ1-Q11": {"code": "AHL4.18", "subcodes": ["SL4.8", "SL4.1"], "marks": 7, "note": "Binomial test of proportion"},
-  "2021May-Paper1-TZ1-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 8, "note": "Differential equation, separation of variables"},
-  "2021May-Paper1-TZ1-Q13": {"code": "AHL3.11", "subcodes": ["AHL3.10"], "marks": 7, "note": "Vector line equation, submarine path"},
-  "2021May-Paper1-TZ1-Q14": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Sum of normal random variables"},
-  "2021May-Paper1-TZ1-Q15": {"code": "AHL5.15", "subcodes": ["SL2.1", "AHL3.8"], "marks": 5, "note": "Slope field, minima maxima lines"},
-  "2021May-Paper1-TZ1-Q16": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 5, "note": "Adjacency matrix, counting walks"},
-  "2021May-Paper1-TZ1-Q17": {"code": "AHL2.8", "subcodes": ["AHL1.9", "AHL2.9"], "marks": 7, "note": "Translation of logarithmic graph"},
-  "2021May-Paper1-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL2.1", "SL1.8"], "marks": 7, "note": "Perpendicular bisector meets road"},
-  "2021May-Paper1-TZ2-Q2": {"code": "AHL2.7", "subcodes": ["SL2.2"], "marks": 7, "note": "Range and inverse of function"},
-  "2021May-Paper1-TZ2-Q3": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Two-sample t-test on weights"},
-  "2021May-Paper1-TZ2-Q4": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 6, "note": "Angles of elevation, swimmer speed"},
-  "2021May-Paper1-TZ2-Q5": {"code": "SL1.4", "subcodes": ["SL1.3", "SL1.8"], "marks": 5, "note": "Depreciation of two laptops"},
-  "2021May-Paper1-TZ2-Q6": {"code": "SL2.4", "subcodes": ["SL2.5", "SL1.8"], "marks": 7, "note": "Quadratic vertex, roots, symmetry"},
-  "2021May-Paper1-TZ2-Q7": {"code": "SL1.3", "subcodes": ["AHL1.11", "SL2.6"], "marks": 6, "note": "Geometric series balloon height"},
-  "2021May-Paper1-TZ2-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13", "SL1.8"], "marks": 7, "note": "Perpendicular lines, intersection test"},
-  "2021May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": [], "marks": 8, "note": "Chi-squared goodness of fit"},
-  "2021May-Paper1-TZ2-Q10": {"code": "AHL4.16", "subcodes": ["AHL4.14", "SL4.3"], "marks": 6, "note": "Unbiased estimates, confidence interval"},
-  "2021May-Paper1-TZ2-Q11": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Chinese postman, open route"},
-  "2021May-Paper1-TZ2-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 8, "note": "Modulus-argument and exponential form"},
-  "2021May-Paper1-TZ2-Q13": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL1.14"], "marks": 8, "note": "Transition matrix, steady state"},
-  "2021May-Paper1-TZ2-Q14": {"code": "AHL3.9", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 7, "note": "Matrix transformation of points"},
-  "2021May-Paper1-TZ2-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Poisson test, type I error"},
-  "2021May-Paper1-TZ2-Q16": {"code": "AHL5.16", "subcodes": ["AHL5.14", "SL1.6"], "marks": 8, "note": "Euler's method versus exact solution"},
-  "2021May-Paper2-TZ1-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 19, "note": "Compound interest and loan repayment"},
-  "2021May-Paper2-TZ1-Q2": {"code": "SL5.6", "subcodes": ["SL5.3", "SL5.8", "SL5.5"], "marks": 16, "note": "Cubic maximum, trapezoid, area"},
-  "2021May-Paper2-TZ1-Q3": {"code": "SL4.9", "subcodes": ["SL4.11"], "marks": 13, "note": "Normal distribution, chi-squared goodness-of-fit"},
-  "2021May-Paper2-TZ1-Q4": {"code": "AHL5.12", "subcodes": ["AHL4.13", "SL2.1"], "marks": 14, "note": "Volume of revolution, quadratic regression"},
-  "2021May-Paper2-TZ1-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 13, "note": "Transition matrix, diagonalization, long term"},
-  "2021May-Paper2-TZ1-Q6": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 18, "note": "Vector kinematics, velocity magnitude"},
-  "2021May-Paper2-TZ1-Q7": {"code": "AHL5.16", "subcodes": ["AHL5.14", "AHL5.17"], "marks": 17, "note": "Coupled equations, Euler, equilibrium"},
-  "2021May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": [], "marks": 15, "note": "Cosine rule, sine rule, area"},
-  "2021May-Paper2-TZ2-Q2": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6"], "marks": 16, "note": "Normal distribution, binomial, conditional probability"},
-  "2021May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "SL5.3", "SL2.3"], "marks": 15, "note": "Optimising volume of hexagonal prism"},
-  "2021May-Paper2-TZ2-Q4": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 18, "note": "Transition matrix, long-term steady state"},
-  "2021May-Paper2-TZ2-Q5": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 14, "note": "Poisson distribution, sums and binomial"},
-  "2021May-Paper2-TZ2-Q6": {"code": "AHL5.13", "subcodes": ["SL5.3", "SL5.5"], "marks": 15, "note": "Kinematics with calculus, total distance"},
-  "2021May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL5.14"], "marks": 17, "note": "Coupled system, phase portrait, eigenvalues"},
-  "2021Nov-Paper1-TZ0-Q1": {"code": "SL2.1", "subcodes": [], "marks": 6, "note": "Gradients, perpendicular lines, line equation"},
-  "2021Nov-Paper1-TZ0-Q2": {"code": "SL5.8", "subcodes": ["SL1.6"], "marks": 5, "note": "Trapezoidal rule, percentage error"},
-  "2021Nov-Paper1-TZ0-Q3": {"code": "SL2.2", "subcodes": ["AHL2.7"], "marks": 7, "note": "Range, domain and inverse function"},
-  "2021Nov-Paper1-TZ0-Q4": {"code": "SL3.6", "subcodes": ["SL3.5"], "marks": 6, "note": "Voronoi diagram, toxic waste site"},
-  "2021Nov-Paper1-TZ0-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 9, "note": "Amortization, monthly repayment, interest paid"},
-  "2021Nov-Paper1-TZ0-Q6": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Infinite geometric sum, common ratio"},
-  "2021Nov-Paper1-TZ0-Q7": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 8, "note": "Cumulative frequency graph, median, mean"},
-  "2021Nov-Paper1-TZ0-Q8": {"code": "SL5.1", "subcodes": ["SL5.2", "SL5.6"], "marks": 5, "note": "Interpreting derivative graph, sketching function"},
-  "2021Nov-Paper1-TZ0-Q9": {"code": "AHL4.19", "subcodes": ["AHL3.15"], "marks": 5, "note": "Transition diagram, long-run cycling probability"},
-  "2021Nov-Paper1-TZ0-Q10": {"code": "AHL2.8", "subcodes": [], "marks": 4, "note": "Transformations of a graph"},
-  "2021Nov-Paper1-TZ0-Q11": {"code": "AHL3.8", "subcodes": ["SL3.2"], "marks": 6, "note": "Ambiguous case, minimum triangle area", "confidence": "low"},
-  "2021Nov-Paper1-TZ0-Q12": {"code": "AHL2.10", "subcodes": ["SL4.4", "AHL1.9"], "marks": 5, "note": "Log-log linearization, power model prediction"},
-  "2021Nov-Paper1-TZ0-Q13": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, sketching solution curves"},
-  "2021Nov-Paper1-TZ0-Q14": {"code": "SL4.9", "subcodes": ["AHL4.14"], "marks": 7, "note": "Normal distribution, sum of weights"},
-  "2021Nov-Paper1-TZ0-Q15": {"code": "SL5.7", "subcodes": ["SL3.4", "AHL3.7", "SL5.3"], "marks": 9, "note": "Optimising volume of sector prism"},
-  "2021Nov-Paper1-TZ0-Q16": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 9, "note": "Ship closest approach to lighthouse"},
-  "2021Nov-Paper1-TZ0-Q17": {"code": "AHL5.12", "subcodes": ["AHL5.11", "AHL2.7"], "marks": 7, "note": "Volume of revolution about y-axis"},
-  "2021Nov-Paper2-TZ0-Q1": {"code": "SL3.1", "subcodes": ["SL3.3", "SL3.2"], "marks": 14, "note": "Pyramid frustum volume and area"},
-  "2021Nov-Paper2-TZ0-Q2": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.3"], "marks": 20, "note": "Sinusoidal model of turbine blade"},
-  "2021Nov-Paper2-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6", "SL4.7"], "marks": 16, "note": "Normal and binomial darts probabilities"},
-  "2021Nov-Paper2-TZ0-Q4": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 18, "note": "Matrix transformations rotation and reflection"},
-  "2021Nov-Paper2-TZ0-Q5": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 13, "note": "Exponential form complex numbers, AC currents"},
-  "2021Nov-Paper2-TZ0-Q6": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17"], "marks": 15, "note": "Second order differential equation eigenvalues"},
-  "2021Nov-Paper2-TZ0-Q7": {"code": "AHL4.18", "subcodes": ["AHL4.17", "SL4.8"], "marks": 14, "note": "Hypothesis tests for Poisson mean, proportion"},
-  "2022May-Paper1-TZ1-Q1": {"code": "SL2.5", "subcodes": ["SL2.2", "SL2.4"], "marks": 5, "note": "Quadratic height model and domain"},
-  "2022May-Paper1-TZ1-Q2": {"code": "SL1.8", "subcodes": [], "marks": 5, "note": "System of three linear equations"},
-  "2022May-Paper1-TZ1-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared goodness of fit"},
-  "2022May-Paper1-TZ1-Q4": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Tree diagram, conditional probability socks"},
-  "2022May-Paper1-TZ1-Q5": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence bouncing ball heights"},
-  "2022May-Paper1-TZ1-Q6": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 8, "note": "3D vectors, length and angle"},
-  "2022May-Paper1-TZ1-Q7": {"code": "AHL5.15", "subcodes": [], "marks": 4, "note": "Slope field sketching solution curves"},
-  "2022May-Paper1-TZ1-Q8": {"code": "AHL5.10", "subcodes": ["AHL5.9"], "marks": 6, "note": "Second derivative, point of inflexion"},
-  "2022May-Paper1-TZ1-Q9": {"code": "AHL4.15", "subcodes": ["SL4.9"], "marks": 6, "note": "Distribution of sample mean weights"},
-  "2022May-Paper1-TZ1-Q10": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 7, "note": "Argand diagram, modulus-argument form"},
-  "2022May-Paper1-TZ1-Q11": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 5, "note": "Eigenvector and long-term steady state", "confidence": "low"},
-  "2022May-Paper1-TZ1-Q12": {"code": "SL1.5", "subcodes": ["AHL4.17", "AHL1.9"], "marks": 8, "note": "Logarithmic earthquake model, Poisson probability", "confidence": "low"},
-  "2022May-Paper1-TZ1-Q13": {"code": "AHL3.12", "subcodes": ["AHL3.11", "SL3.3"], "marks": 5, "note": "Ship position vector and bearing"},
-  "2022May-Paper1-TZ1-Q14": {"code": "AHL5.12", "subcodes": ["AHL5.11"], "marks": 8, "note": "Integration and volume of revolution"},
-  "2022May-Paper1-TZ1-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Type I and II errors"},
-  "2022May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.1"], "marks": 7, "note": "Related rates, wind chill index"},
-  "2022May-Paper1-TZ1-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5", "AHL1.9", "SL2.4"], "marks": 8, "note": "Exponential-cosine model parameters from graph", "confidence": "low"},
-  "2022May-Paper1-TZ2-Q1": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 6, "note": "Two-way table conditional probability"},
-  "2022May-Paper1-TZ2-Q2": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 8, "note": "Angle of depression, cosine rule"},
-  "2022May-Paper1-TZ2-Q3": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 7, "note": "Binomial probability and expected value"},
-  "2022May-Paper1-TZ2-Q4": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 7, "note": "Area between line and curve"},
-  "2022May-Paper1-TZ2-Q5": {"code": "SL2.5", "subcodes": ["SL1.8", "SL2.4"], "marks": 8, "note": "Cubic model fitted through four points"},
-  "2022May-Paper1-TZ2-Q6": {"code": "AHL3.15", "subcodes": ["AHL1.14"], "marks": 5, "note": "Adjacency matrix and walks"},
-  "2022May-Paper1-TZ2-Q7": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Sum of infinite geometric sequence"},
-  "2022May-Paper1-TZ2-Q8": {"code": "SL1.6", "subcodes": ["SL3.4"], "marks": 8, "note": "Bounds and percentage error, sector"},
-  "2022May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": ["AHL4.14", "SL4.3"], "marks": 8, "note": "One-tailed t-test, unbiased estimates"},
-  "2022May-Paper1-TZ2-Q10": {"code": "AHL2.7", "subcodes": ["SL1.5"], "marks": 5, "note": "Inverse of logarithmic function"},
-  "2022May-Paper1-TZ2-Q11": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 6, "note": "Compound interest, inflation, annual investment"},
-  "2022May-Paper1-TZ2-Q12": {"code": "AHL4.18", "subcodes": ["SL4.9", "SL4.6"], "marks": 6, "note": "Type I and II errors"},
-  "2022May-Paper1-TZ2-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Complex exponential form, voltage sum"},
-  "2022May-Paper1-TZ2-Q14": {"code": "SL5.8", "subcodes": ["AHL5.12"], "marks": 4, "note": "Trapezoidal rule for volume of revolution"},
-  "2022May-Paper1-TZ2-Q15": {"code": "AHL3.9", "subcodes": ["AHL3.11", "AHL1.14"], "marks": 7, "note": "Matrix transformation of a line"},
-  "2022May-Paper1-TZ2-Q16": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 7, "note": "Velocity and acceleration vectors"},
-  "2022May-Paper1-TZ2-Q17": {"code": "AHL5.9", "subcodes": ["SL5.5", "AHL3.12"], "marks": 8, "note": "Related rates on beach curve"},
-  "2022May-Paper2-TZ1-Q1": {"code": "SL4.10", "subcodes": ["SL4.3", "SL4.4", "SL4.2"], "marks": 16, "note": "Spearman rank, quartiles, outliers"},
-  "2022May-Paper2-TZ1-Q2": {"code": "SL3.4", "subcodes": ["SL3.2", "AHL5.9", "AHL5.11"], "marks": 17, "note": "Sector, segment area, rate integration"},
-  "2022May-Paper2-TZ1-Q3": {"code": "SL4.11", "subcodes": ["SL4.1", "SL4.3", "AHL4.14"], "marks": 13, "note": "t-test, sampling, linear transformation"},
-  "2022May-Paper2-TZ1-Q4": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.16", "AHL5.17"], "marks": 13, "note": "Second order equation, eigenvalues, Euler"},
-  "2022May-Paper2-TZ1-Q5": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 15, "note": "Binomial overbooking and expected profit"},
-  "2022May-Paper2-TZ1-Q6": {"code": "AHL2.8", "subcodes": ["AHL5.12", "SL5.4", "AHL2.9"], "marks": 18, "note": "Graph transformations, piecewise, areas"},
-  "2022May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.10"], "marks": 18, "note": "Matrix transformations, rotation and enlargement"},
-  "2022May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.4"], "marks": 13, "note": "Arithmetic sequence, geometric series growth"},
-  "2022May-Paper2-TZ2-Q2": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6", "SL2.4"], "marks": 15, "note": "Optimisation of cubic profit model"},
-  "2022May-Paper2-TZ2-Q3": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1", "SL3.2"], "marks": 18, "note": "Voronoi diagram, bisectors, triangle area"},
-  "2022May-Paper2-TZ2-Q4": {"code": "AHL2.10", "subcodes": ["AHL5.9", "SL4.4", "AHL1.9"], "marks": 15, "note": "Semi-log linearization of Arrhenius equation"},
-  "2022May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 12, "note": "Markov chain, eigenvectors, long-term state"},
-  "2022May-Paper2-TZ2-Q6": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10", "SL2.4"], "marks": 21, "note": "Projectile motion with vectors"},
-  "2022May-Paper2-TZ2-Q7": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17", "SL2.4"], "marks": 16, "note": "Second order differential equation, exact solution"},
-  "2022Nov-Paper1-TZ0-Q1": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Chi-squared test for independence"},
-  "2022Nov-Paper1-TZ0-Q2": {"code": "SL2.5", "subcodes": ["AHL2.7"], "marks": 5, "note": "exponential cooling model, inverse function"},
-  "2022Nov-Paper1-TZ0-Q3": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 5, "note": "3D trigonometry in triangular prism"},
-  "2022Nov-Paper1-TZ0-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 7, "note": "adjacency matrix, counting walks"},
-  "2022Nov-Paper1-TZ0-Q5": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "expected value, fair game"},
-  "2022Nov-Paper1-TZ0-Q6": {"code": "SL2.5", "subcodes": [], "marks": 6, "note": "sinusoidal model of wheel height"},
-  "2022Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "savings annuity with monthly deposits"},
-  "2022Nov-Paper1-TZ0-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13"], "marks": 7, "note": "intersecting vector lines, acute angle"},
-  "2022Nov-Paper1-TZ0-Q9": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 8, "note": "matrix transformation, determinant, inverse"},
-  "2022Nov-Paper1-TZ0-Q10": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "logarithmic star brightness model"},
-  "2022Nov-Paper1-TZ0-Q11": {"code": "SL2.5", "subcodes": ["AHL2.8"], "marks": 5, "note": "cubic regression and enlargement", "confidence": "low"},
-  "2022Nov-Paper1-TZ0-Q12": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 5, "note": "phase portraits from eigenvalues"},
-  "2022Nov-Paper1-TZ0-Q13": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "semi-log graph linearizing data"},
-  "2022Nov-Paper1-TZ0-Q14": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL5.11"], "marks": 9, "note": "kinematics: acceleration and displacement"},
-  "2022Nov-Paper1-TZ0-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 5, "note": "Euler method, second order ODE"},
-  "2022Nov-Paper1-TZ0-Q16": {"code": "AHL4.18", "subcodes": ["SL4.8"], "marks": 8, "note": "Type I and II errors"},
-  "2022Nov-Paper1-TZ0-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5"], "marks": 8, "note": "combining sinusoidal daylight models"},
-  "2022Nov-Paper2-TZ0-Q1": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 15, "note": "Venn diagram, conditional probability, binomial"},
-  "2022Nov-Paper2-TZ0-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 13, "note": "Voronoi diagram, perpendicular bisectors"},
-  "2022Nov-Paper2-TZ0-Q3": {"code": "SL5.6", "subcodes": ["SL5.5", "SL5.8", "SL5.7"], "marks": 17, "note": "maximum, area integral, optimisation", "confidence": "low"},
-  "2022Nov-Paper2-TZ0-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 14, "note": "travelling salesman upper lower bounds"},
-  "2022Nov-Paper2-TZ0-Q5": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.9"], "marks": 13, "note": "volumes of revolution about y-axis"},
-  "2022Nov-Paper2-TZ0-Q6": {"code": "AHL4.14", "subcodes": ["SL4.9", "SL4.11"], "marks": 18, "note": "sum of normal variables, t-test"},
-  "2022Nov-Paper2-TZ0-Q7": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 20, "note": "vector kinematics of two particles"},
-  "2023May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 5, "note": "savings account with regular deposits"},
-  "2023May-Paper1-TZ1-Q2": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "two-sample t-test, p-value"},
-  "2023May-Paper1-TZ1-Q3": {"code": "SL3.6", "subcodes": ["SL3.1"], "marks": 5, "note": "nearest neighbour interpolation, distance"},
-  "2023May-Paper1-TZ1-Q4": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 8, "note": "trapezoidal rule, integral, percentage error"},
-  "2023May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 5, "note": "bearings with cosine and sine"},
-  "2023May-Paper1-TZ1-Q6": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "linear and quadratic path models"},
-  "2023May-Paper1-TZ1-Q7": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 9, "note": "vector product, triangle area, angle"},
-  "2023May-Paper1-TZ1-Q8": {"code": "AHL4.18", "subcodes": ["SL4.4", "SL4.11"], "marks": 7, "note": "Correlation test p-value bivariate normal"},
-  "2023May-Paper1-TZ1-Q9": {"code": "SL4.9", "subcodes": [], "marks": 5, "note": "Normal distribution inverse normal"},
-  "2023May-Paper1-TZ1-Q10": {"code": "AHL2.9", "subcodes": ["SL5.3", "SL2.1"], "marks": 9, "note": "Piecewise model quadratics matching gradients"},
-  "2023May-Paper1-TZ1-Q11": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Linear combination of normal variables"},
-  "2023May-Paper1-TZ1-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Phasor addition of AC voltages"},
-  "2023May-Paper1-TZ1-Q13": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 6, "note": "Euler method second order ODE"},
-  "2023May-Paper1-TZ1-Q14": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "Log-log graph power relationship"},
-  "2023May-Paper1-TZ1-Q15": {"code": "AHL5.12", "subcodes": ["SL2.1"], "marks": 6, "note": "Volume of revolution about y-axis"},
-  "2023May-Paper1-TZ1-Q16": {"code": "AHL4.13", "subcodes": ["SL5.6"], "marks": 6, "note": "Sum of square residuals least squares"},
-  "2023May-Paper1-TZ1-Q17": {"code": "AHL5.9", "subcodes": ["AHL3.7", "SL3.3"], "marks": 9, "note": "Related rates angle of elevation"},
-  "2023May-Paper1-TZ2-Q1": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.6"], "marks": 7, "note": "Quadratic model projectile height"},
-  "2023May-Paper1-TZ2-Q2": {"code": "SL4.11", "subcodes": [], "marks": 4, "note": "Chi-squared test for independence"},
-  "2023May-Paper1-TZ2-Q3": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Venn diagram independence conditional probability"},
-  "2023May-Paper1-TZ2-Q4": {"code": "SL1.4", "subcodes": [], "marks": 6, "note": "Compound interest and depreciation"},
-  "2023May-Paper1-TZ2-Q5": {"code": "SL4.9", "subcodes": [], "marks": 6, "note": "Normal distribution inverse normal"},
-  "2023May-Paper1-TZ2-Q6": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "Sphere volume cone surface area"},
-  "2023May-Paper1-TZ2-Q7": {"code": "SL4.8", "subcodes": [], "marks": 6, "note": "Binomial distribution expected value"},
-  "2023May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 7, "note": "Adjacency matrix counting walks"},
-  "2023May-Paper1-TZ2-Q9": {"code": "SL4.10", "subcodes": ["SL4.4", "AHL4.13"], "marks": 9, "note": "Spearman rank coefficient of determination"},
-  "2023May-Paper1-TZ2-Q10": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Chi-squared goodness of fit"},
-  "2023May-Paper1-TZ2-Q11": {"code": "SL2.5", "subcodes": ["AHL1.13", "SL2.3"], "marks": 6, "note": "Combining sinusoidal AC voltages", "confidence": "low"},
-  "2023May-Paper1-TZ2-Q12": {"code": "AHL5.9", "subcodes": ["SL3.1"], "marks": 5, "note": "Related rates inflating sphere"},
-  "2023May-Paper1-TZ2-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 7, "note": "Composite matrix transformations determinant area"},
-  "2023May-Paper1-TZ2-Q14": {"code": "AHL3.12", "subcodes": ["SL3.3", "AHL3.10"], "marks": 8, "note": "Ship position vectors bearings"},
-  "2023May-Paper1-TZ2-Q15": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 6, "note": "Confidence interval for population mean"},
-  "2023May-Paper1-TZ2-Q16": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.7"], "marks": 9, "note": "Volume of revolution about y-axis"},
-  "2023May-Paper1-TZ2-Q17": {"code": "AHL5.14", "subcodes": ["AHL5.16", "AHL5.11"], "marks": 6, "note": "Separation of variables differential equation"},
-  "2023May-Paper2-TZ1-Q1": {"code": "SL2.1", "subcodes": ["SL4.4", "SL2.6"], "marks": 13, "note": "Straight line model and regression"},
-  "2023May-Paper2-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 15, "note": "Sinusoidal tide depth model"},
-  "2023May-Paper2-TZ1-Q3": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 17, "note": "Tree diagram testing binomial probability"},
-  "2023May-Paper2-TZ1-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14", "SL1.6"], "marks": 17, "note": "TSP bounds, MST, Eulerian trail"},
-  "2023May-Paper2-TZ1-Q5": {"code": "AHL4.17", "subcodes": ["SL4.11", "AHL4.14"], "marks": 15, "note": "Poisson chi-squared goodness of fit"},
-  "2023May-Paper2-TZ1-Q6": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL1.12"], "marks": 15, "note": "Complex eigenvalues, spiral phase portrait"},
-  "2023May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "SL3.2"], "marks": 18, "note": "Rotation and enlargement matrices, determinant"},
-  "2023May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": ["SL3.4", "SL3.1"], "marks": 13, "note": "Sine/cosine rule, triangle area, arc"},
-  "2023May-Paper2-TZ2-Q2": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.4"], "marks": 12, "note": "Exponential growth model, bacteria populations"},
-  "2023May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL1.8"], "marks": 16, "note": "Optimisation of garden area"},
-  "2023May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 19, "note": "Kruskal MST, TSP upper/lower bounds"},
-  "2023May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.14", "SL1.8"], "marks": 14, "note": "Transition matrix and steady state"},
-  "2023May-Paper2-TZ2-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.18"], "marks": 18, "note": "Poisson probabilities, critical region, Type II"},
-  "2023May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 18, "note": "Coupled system eigenvectors, phase portrait"},
-  "2024May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 6, "note": "Compound interest and annuity"},
-  "2024May-Paper1-TZ1-Q2": {"code": "SL4.4", "subcodes": [], "marks": 7, "note": "Pearson's r and regression line"},
-  "2024May-Paper1-TZ1-Q3": {"code": "AHL4.14", "subcodes": ["SL2.2", "SL4.3"], "marks": 6, "note": "Linear transformation of mean, standard deviation"},
-  "2024May-Paper1-TZ1-Q4": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
-  "2024May-Paper1-TZ1-Q5": {"code": "SL3.5", "subcodes": ["SL3.6", "SL2.1"], "marks": 6, "note": "Perpendicular bisectors and Voronoi diagram"},
-  "2024May-Paper1-TZ1-Q6": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence and series sums"},
-  "2024May-Paper1-TZ1-Q7": {"code": "SL2.5", "subcodes": ["AHL1.10", "SL1.5"], "marks": 8, "note": "Direct proportion power models, big cats"},
-  "2024May-Paper1-TZ1-Q8": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 5, "note": "Chinese postman problem, odd vertices"},
-  "2024May-Paper1-TZ1-Q9": {"code": "AHL5.11", "subcodes": ["SL5.5", "AHL1.9"], "marks": 7, "note": "Integration by substitution, area under curve"},
-  "2024May-Paper1-TZ1-Q10": {"code": "SL3.4", "subcodes": ["SL3.2"], "marks": 5, "note": "Arc length in semicircle"},
-  "2024May-Paper1-TZ1-Q11": {"code": "AHL3.9", "subcodes": ["AHL3.8", "AHL1.14"], "marks": 8, "note": "Rotation matrices prove double angle"},
-  "2024May-Paper1-TZ1-Q12": {"code": "AHL4.13", "subcodes": ["SL2.6", "SL1.5"], "marks": 8, "note": "Sum of square residuals, model comparison"},
-  "2024May-Paper1-TZ1-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL3.2"], "marks": 6, "note": "Modulus, argument, exponential form, Argand"},
-  "2024May-Paper1-TZ1-Q14": {"code": "AHL2.8", "subcodes": ["SL1.8", "SL2.5"], "marks": 4, "note": "Transformed displacement graph, cars meeting", "confidence": "low"},
-  "2024May-Paper1-TZ1-Q15": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 6, "note": "Phase portrait trajectories, eigenvector regions"},
-  "2024May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.4", "AHL3.7"], "marks": 8, "note": "Tangent to cosine curve, ladder"},
-  "2024May-Paper1-TZ1-Q17": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 9, "note": "Eigenvectors, diagonalization of transition matrix"},
-  "2024May-Paper1-TZ2-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 9, "note": "Compound interest and loan repayments"},
-  "2024May-Paper1-TZ2-Q2": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 6, "note": "Binomial probability and expected earnings"},
-  "2024May-Paper1-TZ2-Q3": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "pH logarithmic scale calculations"},
-  "2024May-Paper1-TZ2-Q4": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "Probability distribution and expected value"},
-  "2024May-Paper1-TZ2-Q5": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 8, "note": "Geometric growth and infinite sum"},
-  "2024May-Paper1-TZ2-Q6": {"code": "SL3.2", "subcodes": ["SL3.4"], "marks": 6, "note": "Triangle area versus sector area"},
-  "2024May-Paper1-TZ2-Q7": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
-  "2024May-Paper1-TZ2-Q8": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 10, "note": "Dot and cross products, parallelogram"},
-  "2024May-Paper1-TZ2-Q9": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 6, "note": "Poisson probabilities and binomial model"},
-  "2024May-Paper1-TZ2-Q10": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.3"], "marks": 9, "note": "Volume of revolution after stretches"},
-  "2024May-Paper1-TZ2-Q11": {"code": "SL5.4", "subcodes": ["AHL5.12", "SL5.3"], "marks": 9, "note": "Normal to parabola, enclosed area"},
-  "2024May-Paper1-TZ2-Q12": {"code": "AHL3.11", "subcodes": ["AHL3.12", "AHL3.10"], "marks": 7, "note": "Vector line equations, interception point"},
-  "2024May-Paper1-TZ2-Q13": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL3.7"], "marks": 8, "note": "Kinematics: velocity, distance, average speed"},
-  "2024May-Paper1-TZ2-Q14": {"code": "AHL4.13", "subcodes": ["SL2.6", "AHL2.9"], "marks": 6, "note": "Power and exponential regression models"},
-  "2024May-Paper1-TZ2-Q15": {"code": "AHL1.13", "subcodes": ["AHL3.9", "AHL1.12"], "marks": 8, "note": "Complex exponential form, rotation matrix"},
-  "2024May-Paper2-TZ1-Q1": {"code": "SL4.9", "subcodes": ["SL4.8", "SL2.1"], "marks": 15, "note": "Normal distribution, binomial, linear charge"},
-  "2024May-Paper2-TZ1-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.2"], "marks": 12, "note": "Vectors, scalar product angle, sine rule"},
-  "2024May-Paper2-TZ1-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL2.5"], "marks": 13, "note": "Profit model optimisation by differentiation"},
-  "2024May-Paper2-TZ1-Q4": {"code": "SL4.11", "subcodes": ["SL4.6"], "marks": 12, "note": "Tree diagram and chi-squared goodness-of-fit"},
-  "2024May-Paper2-TZ1-Q5": {"code": "AHL5.14", "subcodes": ["AHL5.15", "AHL5.9"], "marks": 13, "note": "Slope field and separation of variables"},
-  "2024May-Paper2-TZ1-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.14", "AHL4.15"], "marks": 13, "note": "Poisson, combined variables, central limit"},
-  "2024May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["AHL5.9"], "marks": 14, "note": "Volume of revolution and related rates"},
-  "2024May-Paper2-TZ1-Q8": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL3.14"], "marks": 18, "note": "Adjacency matrix, walks, Markov steady state"},
-  "2024May-Paper2-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL3.3", "SL2.1"], "marks": 14, "note": "Perpendicular bisectors, distance, bearing"},
-  "2024May-Paper2-TZ2-Q2": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 15, "note": "Trapezoidal rule, integration, percentage error"},
-  "2024May-Paper2-TZ2-Q3": {"code": "SL3.1", "subcodes": ["SL5.7", "AHL5.9", "AHL3.7"], "marks": 22, "note": "Prism volume modelling and trigonometric optimisation", "confidence": "low"},
-  "2024May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 12, "note": "Nearest neighbour, Prim's algorithm bounds"},
-  "2024May-Paper2-TZ2-Q5": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 16, "note": "Eigenvectors, diagonalization, long-term parking", "confidence": "low"},
-  "2024May-Paper2-TZ2-Q6": {"code": "SL1.2", "subcodes": ["SL4.6", "SL4.5"], "marks": 14, "note": "Triangle numbers series and probability", "confidence": "low"},
-  "2024May-Paper2-TZ2-Q7": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 17, "note": "Sums of independent normal random variables"},
-  "2024Nov-Paper1-TZ0-Q1": {"code": "SL3.2", "subcodes": [], "marks": 5, "note": "Cosine rule and triangle area"},
-  "2024Nov-Paper1-TZ0-Q2": {"code": "AHL2.9", "subcodes": ["SL1.5"], "marks": 6, "note": "Exponential decay model, half-life"},
-  "2024Nov-Paper1-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.5"], "marks": 7, "note": "Normal distribution, inverse normal"},
-  "2024Nov-Paper1-TZ0-Q4": {"code": "SL1.2", "subcodes": ["SL1.4"], "marks": 5, "note": "Arithmetic sequence, simple interest"},
-  "2024Nov-Paper1-TZ0-Q5": {"code": "SL3.6", "subcodes": [], "marks": 6, "note": "Voronoi diagram cells and areas"},
-  "2024Nov-Paper1-TZ0-Q6": {"code": "AHL2.9", "subcodes": ["SL2.1"], "marks": 4, "note": "Piecewise linear cost model"},
-  "2024Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": [], "marks": 6, "note": "Annuity withdrawals with technology"},
-  "2024Nov-Paper1-TZ0-Q8": {"code": "SL2.5", "subcodes": [], "marks": 7, "note": "Sinusoidal daylight model parameters"},
-  "2024Nov-Paper1-TZ0-Q9": {"code": "AHL1.13", "subcodes": ["AHL1.12", "AHL3.9"], "marks": 5, "note": "Complex modulus argument, Argand plot"},
-  "2024Nov-Paper1-TZ0-Q10": {"code": "AHL2.7", "subcodes": ["AHL2.8", "AHL1.9"], "marks": 8, "note": "Composite functions with log transformations"},
-  "2024Nov-Paper1-TZ0-Q11": {"code": "AHL1.15", "subcodes": ["AHL1.14"], "marks": 8, "note": "Eigenvalues, eigenvectors, diagonalization"},
-  "2024Nov-Paper1-TZ0-Q12": {"code": "AHL4.13", "subcodes": ["SL1.3", "SL2.6"], "marks": 7, "note": "Sum of squared residuals, exponential regression"},
-  "2024Nov-Paper1-TZ0-Q13": {"code": "AHL2.9", "subcodes": ["SL1.8"], "marks": 6, "note": "Logistic model carrying capacity"},
-  "2024Nov-Paper1-TZ0-Q14": {"code": "AHL5.9", "subcodes": ["SL5.4", "SL1.8"], "marks": 8, "note": "Chain rule derivative, normal angle"},
-  "2024Nov-Paper1-TZ0-Q15": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 8, "note": "Combinations of normal random variables"},
-  "2024Nov-Paper1-TZ0-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.7", "SL2.4"], "marks": 7, "note": "Volume of revolution about y-axis"},
-  "2024Nov-Paper1-TZ0-Q17": {"code": "AHL5.16", "subcodes": ["SL2.6"], "marks": 7, "note": "Euler's method, coupled predator-prey"},
-  "2024Nov-Paper2-TZ0-Q1": {"code": "SL4.10", "subcodes": ["SL4.2", "SL4.3"], "marks": 14, "note": "Spearman's rank, quartiles, outliers"},
-  "2024Nov-Paper2-TZ0-Q2": {"code": "SL5.7", "subcodes": ["SL5.8", "SL5.5", "SL3.1"], "marks": 18, "note": "Optimisation of cylinder surface area"},
-  "2024Nov-Paper2-TZ0-Q3": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 15, "note": "Geometric sequences, infinite sum"},
-  "2024Nov-Paper2-TZ0-Q4": {"code": "SL3.1", "subcodes": ["SL3.2", "AHL3.8"], "marks": 17, "note": "Pyramid volume, angles, ambiguous case"},
-  "2024Nov-Paper2-TZ0-Q5": {"code": "AHL3.12", "subcodes": ["AHL3.13", "AHL3.11"], "marks": 15, "note": "Vector kinematics, closest approach"},
-  "2024Nov-Paper2-TZ0-Q6": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 13, "note": "Matrix transformations, rotation and enlargement"},
-  "2024Nov-Paper2-TZ0-Q7": {"code": "AHL5.17", "subcodes": ["AHL5.18", "AHL1.15"], "marks": 18, "note": "Phase portrait, coupled second-order system"},
-  "2025May-Paper1-TZ1-Q1": {"code": "SL3.4", "subcodes": [], "marks": 6, "note": "Sector area and arc length"},
-  "2025May-Paper1-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "Quadratic model of dolphin jump"},
-  "2025May-Paper1-TZ1-Q3": {"code": "SL1.7", "subcodes": [], "marks": 8, "note": "Loan amortization, monthly payments"},
-  "2025May-Paper1-TZ1-Q4": {"code": "AHL2.9", "subcodes": ["SL2.1", "SL4.3"], "marks": 7, "note": "Piecewise linear cost of hats", "confidence": "low"},
-  "2025May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 9, "note": "Bearings with cosine and sine rules"},
-  "2025May-Paper1-TZ1-Q6": {"code": "AHL2.7", "subcodes": ["SL2.5"], "marks": 6, "note": "Composite functions of discount models"},
-  "2025May-Paper1-TZ1-Q7": {"code": "AHL5.13", "subcodes": ["AHL5.10", "SL2.3"], "marks": 8, "note": "Kinematics, velocity graph, distance travelled"},
-  "2025May-Paper1-TZ1-Q8": {"code": "SL5.5", "subcodes": ["SL2.4", "SL1.8"], "marks": 7, "note": "Area under cubic and quadratic curves"},
-  "2025May-Paper1-TZ1-Q9": {"code": "SL4.8", "subcodes": ["SL4.9", "SL4.6"], "marks": 7, "note": "Normal probability then binomial"},
-  "2025May-Paper1-TZ1-Q10": {"code": "AHL2.7", "subcodes": ["AHL1.9", "SL2.2"], "marks": 9, "note": "Log laws and inverse function"},
-  "2025May-Paper1-TZ1-Q11": {"code": "AHL1.13", "subcodes": ["AHL1.11", "SL1.3", "AHL1.12"], "marks": 8, "note": "Complex geometric sequence, moduli sum"},
-  "2025May-Paper1-TZ1-Q12": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, zero-gradient curve"},
-  "2025May-Paper1-TZ1-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 7, "note": "Matrix rotation and reflection composition"},
-  "2025May-Paper1-TZ1-Q14": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 6, "note": "Exponential form summing sinusoidal functions"},
-  "2025May-Paper1-TZ1-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16", "SL1.6"], "marks": 8, "note": "Euler method second order ODE"},
-  "2025May-Paper1-TZ2-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "Savings annuity and compound interest"},
-  "2025May-Paper1-TZ2-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 9, "note": "3D vectors, dot product, angle"},
-  "2025May-Paper1-TZ2-Q3": {"code": "SL4.10", "subcodes": [], "marks": 6, "note": "Spearman's rank correlation coefficient"},
-  "2025May-Paper1-TZ2-Q4": {"code": "SL3.6", "subcodes": ["SL3.5", "SL3.1"], "marks": 7, "note": "Voronoi diagram vertices equidistant sites"},
-  "2025May-Paper1-TZ2-Q5": {"code": "SL1.6", "subcodes": [], "marks": 6, "note": "Upper and lower bounds, speed"},
-  "2025May-Paper1-TZ2-Q6": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 5, "note": "Unbiased variance and confidence interval"},
-  "2025May-Paper1-TZ2-Q7": {"code": "AHL5.11", "subcodes": ["SL5.5"], "marks": 7, "note": "Integration by substitution, area"},
-  "2025May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 6, "note": "Adjacency matrix, graph, walks"},
-  "2025May-Paper1-TZ2-Q9": {"code": "AHL5.9", "subcodes": ["SL5.2"], "marks": 7, "note": "Related rates of change area"},
-  "2025May-Paper1-TZ2-Q10": {"code": "SL2.2", "subcodes": [], "marks": 5, "note": "Function table and inverse values"},
-  "2025May-Paper1-TZ2-Q11": {"code": "SL2.4", "subcodes": ["SL1.8", "SL5.6"], "marks": 6, "note": "Cubic roots and turning points", "confidence": "low"},
-  "2025May-Paper1-TZ2-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables, velocity model"},
-  "2025May-Paper1-TZ2-Q13": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 9, "note": "Poisson distribution with binomial part"},
-  "2025May-Paper1-TZ2-Q14": {"code": "AHL2.10", "subcodes": ["AHL4.13", "AHL1.9"], "marks": 6, "note": "Semi-log versus log-log linearization"},
-  "2025May-Paper1-TZ2-Q15": {"code": "SL5.4", "subcodes": ["SL2.1", "SL5.3"], "marks": 8, "note": "Normal to parabola, angle between lines"},
-  "2025May-Paper1-TZ2-Q16": {"code": "AHL1.12", "subcodes": ["AHL1.13", "SL2.4"], "marks": 7, "note": "Complex roots, modulus maximized"},
-  "2025May-Paper1-TZ3-Q1": {"code": "SL3.2", "subcodes": [], "marks": 9, "note": "Cosine rule, sine rule, distance"},
-  "2025May-Paper1-TZ3-Q2": {"code": "SL1.5", "subcodes": ["SL1.1"], "marks": 5, "note": "Logarithmic decibel scale, standard form"},
-  "2025May-Paper1-TZ3-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared test for independence"},
-  "2025May-Paper1-TZ3-Q4": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 7, "note": "Box plot, IQR, outliers"},
-  "2025May-Paper1-TZ3-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 8, "note": "Loan amortization, early repayment"},
-  "2025May-Paper1-TZ3-Q6": {"code": "SL1.2", "subcodes": ["SL4.8", "SL4.5"], "marks": 6, "note": "Arithmetic series sectors, binomial game"},
-  "2025May-Paper1-TZ3-Q7": {"code": "SL4.4", "subcodes": ["SL4.1"], "marks": 7, "note": "Stratified sampling, Pearson r, regression"},
-  "2025May-Paper1-TZ3-Q8": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 5, "note": "Matrix transformations of points"},
-  "2025May-Paper1-TZ3-Q9": {"code": "AHL5.9", "subcodes": ["SL5.4"], "marks": 6, "note": "Product chain rule tangent"},
-  "2025May-Paper1-TZ3-Q10": {"code": "AHL2.10", "subcodes": ["SL2.5"], "marks": 8, "note": "Inverse square log-log linearization"},
-  "2025May-Paper1-TZ3-Q11": {"code": "AHL5.16", "subcodes": ["AHL5.17"], "marks": 6, "note": "Euler method coupled system"},
-  "2025May-Paper1-TZ3-Q12": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 5, "note": "Type I error Poisson"},
-  "2025May-Paper1-TZ3-Q13": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables growth"},
-  "2025May-Paper1-TZ3-Q14": {"code": "AHL3.12", "subcodes": ["AHL5.13"], "marks": 8, "note": "Projectile vector kinematics"},
-  "2025May-Paper1-TZ3-Q15": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 6, "note": "Markov chain steady state"},
-  "2025May-Paper1-TZ3-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.4"], "marks": 8, "note": "Volume of revolution between curves"},
-  "2025May-Paper2-TZ1-Q1": {"code": "SL4.3", "subcodes": ["SL4.2", "SL4.6", "SL4.5"], "marks": 15, "note": "Frequency table mean box plot"},
-  "2025May-Paper2-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 19, "note": "Voronoi diagram fire stations"},
-  "2025May-Paper2-TZ1-Q3": {"code": "AHL4.13", "subcodes": ["AHL2.9", "AHL5.10", "AHL5.9"], "marks": 17, "note": "Quadratic regression logistic model"},
-  "2025May-Paper2-TZ1-Q4": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 17, "note": "3D vector flight paths"},
-  "2025May-Paper2-TZ1-Q5": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 16, "note": "3D prism volume and angle"},
-  "2025May-Paper2-TZ1-Q6": {"code": "AHL5.14", "subcodes": ["AHL5.11", "SL1.8"], "marks": 14, "note": "Separation of variables virus model"},
-  "2025May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 12, "note": "Volume of revolution table design"},
-  "2025May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": [], "marks": 16, "note": "Arithmetic sequences and series"},
-  "2025May-Paper2-TZ2-Q2": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL5.9"], "marks": 12, "note": "Area between curves tangents"},
-  "2025May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.9"], "marks": 16, "note": "Optimisation of cylinder surface area"},
-  "2025May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": [], "marks": 13, "note": "Prim algorithm travelling salesman bounds"},
-  "2025May-Paper2-TZ2-Q5": {"code": "SL4.11", "subcodes": ["AHL4.18", "SL4.3", "SL4.5"], "marks": 15, "note": "Chi-squared and proportion tests"},
-  "2025May-Paper2-TZ2-Q6": {"code": "AHL5.18", "subcodes": ["AHL5.17", "AHL5.16"], "marks": 21, "note": "Second order differential equation"},
-  "2025May-Paper2-TZ2-Q7": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 17, "note": "Markov chain steady state"},
-  "2025May-Paper2-TZ3-Q1": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.10"], "marks": 20, "note": "Optimisation container surface area"},
-  "2025May-Paper2-TZ3-Q2": {"code": "SL2.5", "subcodes": ["SL1.6", "SL2.4"], "marks": 15, "note": "Sinusoidal tide model"},
-  "2025May-Paper2-TZ3-Q3": {"code": "SL5.8", "subcodes": ["SL2.4", "SL2.5"], "marks": 12, "note": "Trapezoidal rule river cross-section"},
-  "2025May-Paper2-TZ3-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.16", "AHL3.14"], "marks": 16, "note": "Adjacency matrix walks and bounds"},
-  "2025May-Paper2-TZ3-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10", "AHL3.11", "AHL3.12"], "marks": 15, "note": "Vector dot product angle", "confidence": "low"},
-  "2025May-Paper2-TZ3-Q6": {"code": "SL4.7", "subcodes": ["AHL4.14", "SL4.9", "SL4.6"], "marks": 15, "note": "Expected value normal combinations", "confidence": "low"},
-  "2025May-Paper2-TZ3-Q7": {"code": "AHL1.13", "subcodes": ["SL1.3", "AHL1.11", "AHL1.12"], "marks": 17, "note": "Complex exponential form fractal tree"}
+  "AIHL-2021May-Paper1-TZ1-Q1": {"code": "AHL4.17", "subcodes": [], "marks": 4, "note": "Poisson probability, scaled mean"},
+  "AIHL-2021May-Paper1-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 6, "note": "Voronoi diagram, edge gradient"},
+  "AIHL-2021May-Paper1-TZ1-Q3": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.8"], "marks": 8, "note": "Arithmetic versus geometric sequences"},
+  "AIHL-2021May-Paper1-TZ1-Q4": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.6"], "marks": 6, "note": "Exponential decay model, domain"},
+  "AIHL-2021May-Paper1-TZ1-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 6, "note": "Vector cross product, triangle area"},
+  "AIHL-2021May-Paper1-TZ1-Q6": {"code": "SL1.6", "subcodes": ["SL3.2"], "marks": 5, "note": "Upper bounds, maximum triangle area"},
+  "AIHL-2021May-Paper1-TZ1-Q7": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6"], "marks": 8, "note": "Optimisation of gift box area"},
+  "AIHL-2021May-Paper1-TZ1-Q8": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 7, "note": "Discrete distribution, expected score"},
+  "AIHL-2021May-Paper1-TZ1-Q9": {"code": "AHL1.12", "subcodes": ["AHL1.13"], "marks": 8, "note": "Complex numbers as Argand transformations"},
+  "AIHL-2021May-Paper1-TZ1-Q10": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Prim's algorithm, TSP lower bound"},
+  "AIHL-2021May-Paper1-TZ1-Q11": {"code": "AHL4.18", "subcodes": ["SL4.8", "SL4.1"], "marks": 7, "note": "Binomial test of proportion"},
+  "AIHL-2021May-Paper1-TZ1-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 8, "note": "Differential equation, separation of variables"},
+  "AIHL-2021May-Paper1-TZ1-Q13": {"code": "AHL3.11", "subcodes": ["AHL3.10"], "marks": 7, "note": "Vector line equation, submarine path"},
+  "AIHL-2021May-Paper1-TZ1-Q14": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Sum of normal random variables"},
+  "AIHL-2021May-Paper1-TZ1-Q15": {"code": "AHL5.15", "subcodes": ["SL2.1", "AHL3.8"], "marks": 5, "note": "Slope field, minima maxima lines"},
+  "AIHL-2021May-Paper1-TZ1-Q16": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 5, "note": "Adjacency matrix, counting walks"},
+  "AIHL-2021May-Paper1-TZ1-Q17": {"code": "AHL2.8", "subcodes": ["AHL1.9", "AHL2.9"], "marks": 7, "note": "Translation of logarithmic graph"},
+  "AIHL-2021May-Paper1-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL2.1", "SL1.8"], "marks": 7, "note": "Perpendicular bisector meets road"},
+  "AIHL-2021May-Paper1-TZ2-Q2": {"code": "AHL2.7", "subcodes": ["SL2.2"], "marks": 7, "note": "Range and inverse of function"},
+  "AIHL-2021May-Paper1-TZ2-Q3": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Two-sample t-test on weights"},
+  "AIHL-2021May-Paper1-TZ2-Q4": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 6, "note": "Angles of elevation, swimmer speed"},
+  "AIHL-2021May-Paper1-TZ2-Q5": {"code": "SL1.4", "subcodes": ["SL1.3", "SL1.8"], "marks": 5, "note": "Depreciation of two laptops"},
+  "AIHL-2021May-Paper1-TZ2-Q6": {"code": "SL2.4", "subcodes": ["SL2.5", "SL1.8"], "marks": 7, "note": "Quadratic vertex, roots, symmetry"},
+  "AIHL-2021May-Paper1-TZ2-Q7": {"code": "SL1.3", "subcodes": ["AHL1.11", "SL2.6"], "marks": 6, "note": "Geometric series balloon height"},
+  "AIHL-2021May-Paper1-TZ2-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13", "SL1.8"], "marks": 7, "note": "Perpendicular lines, intersection test"},
+  "AIHL-2021May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": [], "marks": 8, "note": "Chi-squared goodness of fit"},
+  "AIHL-2021May-Paper1-TZ2-Q10": {"code": "AHL4.16", "subcodes": ["AHL4.14", "SL4.3"], "marks": 6, "note": "Unbiased estimates, confidence interval"},
+  "AIHL-2021May-Paper1-TZ2-Q11": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 7, "note": "Chinese postman, open route"},
+  "AIHL-2021May-Paper1-TZ2-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 8, "note": "Modulus-argument and exponential form"},
+  "AIHL-2021May-Paper1-TZ2-Q13": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL1.14"], "marks": 8, "note": "Transition matrix, steady state"},
+  "AIHL-2021May-Paper1-TZ2-Q14": {"code": "AHL3.9", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 7, "note": "Matrix transformation of points"},
+  "AIHL-2021May-Paper1-TZ2-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Poisson test, type I error"},
+  "AIHL-2021May-Paper1-TZ2-Q16": {"code": "AHL5.16", "subcodes": ["AHL5.14", "SL1.6"], "marks": 8, "note": "Euler's method versus exact solution"},
+  "AIHL-2021May-Paper2-TZ1-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 19, "note": "Compound interest and loan repayment"},
+  "AIHL-2021May-Paper2-TZ1-Q2": {"code": "SL5.6", "subcodes": ["SL5.3", "SL5.8", "SL5.5"], "marks": 16, "note": "Cubic maximum, trapezoid, area"},
+  "AIHL-2021May-Paper2-TZ1-Q3": {"code": "SL4.9", "subcodes": ["SL4.11"], "marks": 13, "note": "Normal distribution, chi-squared goodness-of-fit"},
+  "AIHL-2021May-Paper2-TZ1-Q4": {"code": "AHL5.12", "subcodes": ["AHL4.13", "SL2.1"], "marks": 14, "note": "Volume of revolution, quadratic regression"},
+  "AIHL-2021May-Paper2-TZ1-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 13, "note": "Transition matrix, diagonalization, long term"},
+  "AIHL-2021May-Paper2-TZ1-Q6": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 18, "note": "Vector kinematics, velocity magnitude"},
+  "AIHL-2021May-Paper2-TZ1-Q7": {"code": "AHL5.16", "subcodes": ["AHL5.14", "AHL5.17"], "marks": 17, "note": "Coupled equations, Euler, equilibrium"},
+  "AIHL-2021May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": [], "marks": 15, "note": "Cosine rule, sine rule, area"},
+  "AIHL-2021May-Paper2-TZ2-Q2": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6"], "marks": 16, "note": "Normal distribution, binomial, conditional probability"},
+  "AIHL-2021May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "SL5.3", "SL2.3"], "marks": 15, "note": "Optimising volume of hexagonal prism"},
+  "AIHL-2021May-Paper2-TZ2-Q4": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 18, "note": "Transition matrix, long-term steady state"},
+  "AIHL-2021May-Paper2-TZ2-Q5": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 14, "note": "Poisson distribution, sums and binomial"},
+  "AIHL-2021May-Paper2-TZ2-Q6": {"code": "AHL5.13", "subcodes": ["SL5.3", "SL5.5"], "marks": 15, "note": "Kinematics with calculus, total distance"},
+  "AIHL-2021May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL5.14"], "marks": 17, "note": "Coupled system, phase portrait, eigenvalues"},
+  "AIHL-2021Nov-Paper1-TZ0-Q1": {"code": "SL2.1", "subcodes": [], "marks": 6, "note": "Gradients, perpendicular lines, line equation"},
+  "AIHL-2021Nov-Paper1-TZ0-Q2": {"code": "SL5.8", "subcodes": ["SL1.6"], "marks": 5, "note": "Trapezoidal rule, percentage error"},
+  "AIHL-2021Nov-Paper1-TZ0-Q3": {"code": "SL2.2", "subcodes": ["AHL2.7"], "marks": 7, "note": "Range, domain and inverse function"},
+  "AIHL-2021Nov-Paper1-TZ0-Q4": {"code": "SL3.6", "subcodes": ["SL3.5"], "marks": 6, "note": "Voronoi diagram, toxic waste site"},
+  "AIHL-2021Nov-Paper1-TZ0-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 9, "note": "Amortization, monthly repayment, interest paid"},
+  "AIHL-2021Nov-Paper1-TZ0-Q6": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Infinite geometric sum, common ratio"},
+  "AIHL-2021Nov-Paper1-TZ0-Q7": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 8, "note": "Cumulative frequency graph, median, mean"},
+  "AIHL-2021Nov-Paper1-TZ0-Q8": {"code": "SL5.1", "subcodes": ["SL5.2", "SL5.6"], "marks": 5, "note": "Interpreting derivative graph, sketching function"},
+  "AIHL-2021Nov-Paper1-TZ0-Q9": {"code": "AHL4.19", "subcodes": ["AHL3.15"], "marks": 5, "note": "Transition diagram, long-run cycling probability"},
+  "AIHL-2021Nov-Paper1-TZ0-Q10": {"code": "AHL2.8", "subcodes": [], "marks": 4, "note": "Transformations of a graph"},
+  "AIHL-2021Nov-Paper1-TZ0-Q11": {"code": "AHL3.8", "subcodes": ["SL3.2"], "marks": 6, "note": "Ambiguous case, minimum triangle area", "confidence": "low"},
+  "AIHL-2021Nov-Paper1-TZ0-Q12": {"code": "AHL2.10", "subcodes": ["SL4.4", "AHL1.9"], "marks": 5, "note": "Log-log linearization, power model prediction"},
+  "AIHL-2021Nov-Paper1-TZ0-Q13": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, sketching solution curves"},
+  "AIHL-2021Nov-Paper1-TZ0-Q14": {"code": "SL4.9", "subcodes": ["AHL4.14"], "marks": 7, "note": "Normal distribution, sum of weights"},
+  "AIHL-2021Nov-Paper1-TZ0-Q15": {"code": "SL5.7", "subcodes": ["SL3.4", "AHL3.7", "SL5.3"], "marks": 9, "note": "Optimising volume of sector prism"},
+  "AIHL-2021Nov-Paper1-TZ0-Q16": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 9, "note": "Ship closest approach to lighthouse"},
+  "AIHL-2021Nov-Paper1-TZ0-Q17": {"code": "AHL5.12", "subcodes": ["AHL5.11", "AHL2.7"], "marks": 7, "note": "Volume of revolution about y-axis"},
+  "AIHL-2021Nov-Paper2-TZ0-Q1": {"code": "SL3.1", "subcodes": ["SL3.3", "SL3.2"], "marks": 14, "note": "Pyramid frustum volume and area"},
+  "AIHL-2021Nov-Paper2-TZ0-Q2": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.3"], "marks": 20, "note": "Sinusoidal model of turbine blade"},
+  "AIHL-2021Nov-Paper2-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6", "SL4.7"], "marks": 16, "note": "Normal and binomial darts probabilities"},
+  "AIHL-2021Nov-Paper2-TZ0-Q4": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 18, "note": "Matrix transformations rotation and reflection"},
+  "AIHL-2021Nov-Paper2-TZ0-Q5": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 13, "note": "Exponential form complex numbers, AC currents"},
+  "AIHL-2021Nov-Paper2-TZ0-Q6": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17"], "marks": 15, "note": "Second order differential equation eigenvalues"},
+  "AIHL-2021Nov-Paper2-TZ0-Q7": {"code": "AHL4.18", "subcodes": ["AHL4.17", "SL4.8"], "marks": 14, "note": "Hypothesis tests for Poisson mean, proportion"},
+  "AIHL-2022May-Paper1-TZ1-Q1": {"code": "SL2.5", "subcodes": ["SL2.2", "SL2.4"], "marks": 5, "note": "Quadratic height model and domain"},
+  "AIHL-2022May-Paper1-TZ1-Q2": {"code": "SL1.8", "subcodes": [], "marks": 5, "note": "System of three linear equations"},
+  "AIHL-2022May-Paper1-TZ1-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared goodness of fit"},
+  "AIHL-2022May-Paper1-TZ1-Q4": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Tree diagram, conditional probability socks"},
+  "AIHL-2022May-Paper1-TZ1-Q5": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence bouncing ball heights"},
+  "AIHL-2022May-Paper1-TZ1-Q6": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 8, "note": "3D vectors, length and angle"},
+  "AIHL-2022May-Paper1-TZ1-Q7": {"code": "AHL5.15", "subcodes": [], "marks": 4, "note": "Slope field sketching solution curves"},
+  "AIHL-2022May-Paper1-TZ1-Q8": {"code": "AHL5.10", "subcodes": ["AHL5.9"], "marks": 6, "note": "Second derivative, point of inflexion"},
+  "AIHL-2022May-Paper1-TZ1-Q9": {"code": "AHL4.15", "subcodes": ["SL4.9"], "marks": 6, "note": "Distribution of sample mean weights"},
+  "AIHL-2022May-Paper1-TZ1-Q10": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 7, "note": "Argand diagram, modulus-argument form"},
+  "AIHL-2022May-Paper1-TZ1-Q11": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 5, "note": "Eigenvector and long-term steady state", "confidence": "low"},
+  "AIHL-2022May-Paper1-TZ1-Q12": {"code": "SL1.5", "subcodes": ["AHL4.17", "AHL1.9"], "marks": 8, "note": "Logarithmic earthquake model, Poisson probability", "confidence": "low"},
+  "AIHL-2022May-Paper1-TZ1-Q13": {"code": "AHL3.12", "subcodes": ["AHL3.11", "SL3.3"], "marks": 5, "note": "Ship position vector and bearing"},
+  "AIHL-2022May-Paper1-TZ1-Q14": {"code": "AHL5.12", "subcodes": ["AHL5.11"], "marks": 8, "note": "Integration and volume of revolution"},
+  "AIHL-2022May-Paper1-TZ1-Q15": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 7, "note": "Type I and II errors"},
+  "AIHL-2022May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.1"], "marks": 7, "note": "Related rates, wind chill index"},
+  "AIHL-2022May-Paper1-TZ1-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5", "AHL1.9", "SL2.4"], "marks": 8, "note": "Exponential-cosine model parameters from graph", "confidence": "low"},
+  "AIHL-2022May-Paper1-TZ2-Q1": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 6, "note": "Two-way table conditional probability"},
+  "AIHL-2022May-Paper1-TZ2-Q2": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 8, "note": "Angle of depression, cosine rule"},
+  "AIHL-2022May-Paper1-TZ2-Q3": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 7, "note": "Binomial probability and expected value"},
+  "AIHL-2022May-Paper1-TZ2-Q4": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 7, "note": "Area between line and curve"},
+  "AIHL-2022May-Paper1-TZ2-Q5": {"code": "SL2.5", "subcodes": ["SL1.8", "SL2.4"], "marks": 8, "note": "Cubic model fitted through four points"},
+  "AIHL-2022May-Paper1-TZ2-Q6": {"code": "AHL3.15", "subcodes": ["AHL1.14"], "marks": 5, "note": "Adjacency matrix and walks"},
+  "AIHL-2022May-Paper1-TZ2-Q7": {"code": "AHL1.11", "subcodes": ["SL1.3"], "marks": 5, "note": "Sum of infinite geometric sequence"},
+  "AIHL-2022May-Paper1-TZ2-Q8": {"code": "SL1.6", "subcodes": ["SL3.4"], "marks": 8, "note": "Bounds and percentage error, sector"},
+  "AIHL-2022May-Paper1-TZ2-Q9": {"code": "SL4.11", "subcodes": ["AHL4.14", "SL4.3"], "marks": 8, "note": "One-tailed t-test, unbiased estimates"},
+  "AIHL-2022May-Paper1-TZ2-Q10": {"code": "AHL2.7", "subcodes": ["SL1.5"], "marks": 5, "note": "Inverse of logarithmic function"},
+  "AIHL-2022May-Paper1-TZ2-Q11": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 6, "note": "Compound interest, inflation, annual investment"},
+  "AIHL-2022May-Paper1-TZ2-Q12": {"code": "AHL4.18", "subcodes": ["SL4.9", "SL4.6"], "marks": 6, "note": "Type I and II errors"},
+  "AIHL-2022May-Paper1-TZ2-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Complex exponential form, voltage sum"},
+  "AIHL-2022May-Paper1-TZ2-Q14": {"code": "SL5.8", "subcodes": ["AHL5.12"], "marks": 4, "note": "Trapezoidal rule for volume of revolution"},
+  "AIHL-2022May-Paper1-TZ2-Q15": {"code": "AHL3.9", "subcodes": ["AHL3.11", "AHL1.14"], "marks": 7, "note": "Matrix transformation of a line"},
+  "AIHL-2022May-Paper1-TZ2-Q16": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 7, "note": "Velocity and acceleration vectors"},
+  "AIHL-2022May-Paper1-TZ2-Q17": {"code": "AHL5.9", "subcodes": ["SL5.5", "AHL3.12"], "marks": 8, "note": "Related rates on beach curve"},
+  "AIHL-2022May-Paper2-TZ1-Q1": {"code": "SL4.10", "subcodes": ["SL4.3", "SL4.4", "SL4.2"], "marks": 16, "note": "Spearman rank, quartiles, outliers"},
+  "AIHL-2022May-Paper2-TZ1-Q2": {"code": "SL3.4", "subcodes": ["SL3.2", "AHL5.9", "AHL5.11"], "marks": 17, "note": "Sector, segment area, rate integration"},
+  "AIHL-2022May-Paper2-TZ1-Q3": {"code": "SL4.11", "subcodes": ["SL4.1", "SL4.3", "AHL4.14"], "marks": 13, "note": "t-test, sampling, linear transformation"},
+  "AIHL-2022May-Paper2-TZ1-Q4": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.16", "AHL5.17"], "marks": 13, "note": "Second order equation, eigenvalues, Euler"},
+  "AIHL-2022May-Paper2-TZ1-Q5": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 15, "note": "Binomial overbooking and expected profit"},
+  "AIHL-2022May-Paper2-TZ1-Q6": {"code": "AHL2.8", "subcodes": ["AHL5.12", "SL5.4", "AHL2.9"], "marks": 18, "note": "Graph transformations, piecewise, areas"},
+  "AIHL-2022May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.10"], "marks": 18, "note": "Matrix transformations, rotation and enlargement"},
+  "AIHL-2022May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": ["SL1.3", "SL1.4"], "marks": 13, "note": "Arithmetic sequence, geometric series growth"},
+  "AIHL-2022May-Paper2-TZ2-Q2": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6", "SL2.4"], "marks": 15, "note": "Optimisation of cubic profit model"},
+  "AIHL-2022May-Paper2-TZ2-Q3": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1", "SL3.2"], "marks": 18, "note": "Voronoi diagram, bisectors, triangle area"},
+  "AIHL-2022May-Paper2-TZ2-Q4": {"code": "AHL2.10", "subcodes": ["AHL5.9", "SL4.4", "AHL1.9"], "marks": 15, "note": "Semi-log linearization of Arrhenius equation"},
+  "AIHL-2022May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 12, "note": "Markov chain, eigenvectors, long-term state"},
+  "AIHL-2022May-Paper2-TZ2-Q6": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10", "SL2.4"], "marks": 21, "note": "Projectile motion with vectors"},
+  "AIHL-2022May-Paper2-TZ2-Q7": {"code": "AHL5.18", "subcodes": ["AHL1.15", "AHL5.17", "SL2.4"], "marks": 16, "note": "Second order differential equation, exact solution"},
+  "AIHL-2022Nov-Paper1-TZ0-Q1": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Chi-squared test for independence"},
+  "AIHL-2022Nov-Paper1-TZ0-Q2": {"code": "SL2.5", "subcodes": ["AHL2.7"], "marks": 5, "note": "exponential cooling model, inverse function"},
+  "AIHL-2022Nov-Paper1-TZ0-Q3": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 5, "note": "3D trigonometry in triangular prism"},
+  "AIHL-2022Nov-Paper1-TZ0-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 7, "note": "adjacency matrix, counting walks"},
+  "AIHL-2022Nov-Paper1-TZ0-Q5": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "expected value, fair game"},
+  "AIHL-2022Nov-Paper1-TZ0-Q6": {"code": "SL2.5", "subcodes": [], "marks": 6, "note": "sinusoidal model of wheel height"},
+  "AIHL-2022Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "savings annuity with monthly deposits"},
+  "AIHL-2022Nov-Paper1-TZ0-Q8": {"code": "AHL3.11", "subcodes": ["AHL3.13"], "marks": 7, "note": "intersecting vector lines, acute angle"},
+  "AIHL-2022Nov-Paper1-TZ0-Q9": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 8, "note": "matrix transformation, determinant, inverse"},
+  "AIHL-2022Nov-Paper1-TZ0-Q10": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "logarithmic star brightness model"},
+  "AIHL-2022Nov-Paper1-TZ0-Q11": {"code": "SL2.5", "subcodes": ["AHL2.8"], "marks": 5, "note": "cubic regression and enlargement", "confidence": "low"},
+  "AIHL-2022Nov-Paper1-TZ0-Q12": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 5, "note": "phase portraits from eigenvalues"},
+  "AIHL-2022Nov-Paper1-TZ0-Q13": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "semi-log graph linearizing data"},
+  "AIHL-2022Nov-Paper1-TZ0-Q14": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL5.11"], "marks": 9, "note": "kinematics: acceleration and displacement"},
+  "AIHL-2022Nov-Paper1-TZ0-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 5, "note": "Euler method, second order ODE"},
+  "AIHL-2022Nov-Paper1-TZ0-Q16": {"code": "AHL4.18", "subcodes": ["SL4.8"], "marks": 8, "note": "Type I and II errors"},
+  "AIHL-2022Nov-Paper1-TZ0-Q17": {"code": "AHL2.9", "subcodes": ["SL2.5"], "marks": 8, "note": "combining sinusoidal daylight models"},
+  "AIHL-2022Nov-Paper2-TZ0-Q1": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 15, "note": "Venn diagram, conditional probability, binomial"},
+  "AIHL-2022Nov-Paper2-TZ0-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 13, "note": "Voronoi diagram, perpendicular bisectors"},
+  "AIHL-2022Nov-Paper2-TZ0-Q3": {"code": "SL5.6", "subcodes": ["SL5.5", "SL5.8", "SL5.7"], "marks": 17, "note": "maximum, area integral, optimisation", "confidence": "low"},
+  "AIHL-2022Nov-Paper2-TZ0-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 14, "note": "travelling salesman upper lower bounds"},
+  "AIHL-2022Nov-Paper2-TZ0-Q5": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.9"], "marks": 13, "note": "volumes of revolution about y-axis"},
+  "AIHL-2022Nov-Paper2-TZ0-Q6": {"code": "AHL4.14", "subcodes": ["SL4.9", "SL4.11"], "marks": 18, "note": "sum of normal variables, t-test"},
+  "AIHL-2022Nov-Paper2-TZ0-Q7": {"code": "AHL3.12", "subcodes": ["AHL5.9", "AHL3.10"], "marks": 20, "note": "vector kinematics of two particles"},
+  "AIHL-2023May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 5, "note": "savings account with regular deposits"},
+  "AIHL-2023May-Paper1-TZ1-Q2": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "two-sample t-test, p-value"},
+  "AIHL-2023May-Paper1-TZ1-Q3": {"code": "SL3.6", "subcodes": ["SL3.1"], "marks": 5, "note": "nearest neighbour interpolation, distance"},
+  "AIHL-2023May-Paper1-TZ1-Q4": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 8, "note": "trapezoidal rule, integral, percentage error"},
+  "AIHL-2023May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 5, "note": "bearings with cosine and sine"},
+  "AIHL-2023May-Paper1-TZ1-Q6": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "linear and quadratic path models"},
+  "AIHL-2023May-Paper1-TZ1-Q7": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 9, "note": "vector product, triangle area, angle"},
+  "AIHL-2023May-Paper1-TZ1-Q8": {"code": "AHL4.18", "subcodes": ["SL4.4", "SL4.11"], "marks": 7, "note": "Correlation test p-value bivariate normal"},
+  "AIHL-2023May-Paper1-TZ1-Q9": {"code": "SL4.9", "subcodes": [], "marks": 5, "note": "Normal distribution inverse normal"},
+  "AIHL-2023May-Paper1-TZ1-Q10": {"code": "AHL2.9", "subcodes": ["SL5.3", "SL2.1"], "marks": 9, "note": "Piecewise model quadratics matching gradients"},
+  "AIHL-2023May-Paper1-TZ1-Q11": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 6, "note": "Linear combination of normal variables"},
+  "AIHL-2023May-Paper1-TZ1-Q12": {"code": "AHL1.13", "subcodes": ["AHL1.12"], "marks": 5, "note": "Phasor addition of AC voltages"},
+  "AIHL-2023May-Paper1-TZ1-Q13": {"code": "AHL5.18", "subcodes": ["AHL5.16"], "marks": 6, "note": "Euler method second order ODE"},
+  "AIHL-2023May-Paper1-TZ1-Q14": {"code": "AHL2.10", "subcodes": ["AHL1.9"], "marks": 6, "note": "Log-log graph power relationship"},
+  "AIHL-2023May-Paper1-TZ1-Q15": {"code": "AHL5.12", "subcodes": ["SL2.1"], "marks": 6, "note": "Volume of revolution about y-axis"},
+  "AIHL-2023May-Paper1-TZ1-Q16": {"code": "AHL4.13", "subcodes": ["SL5.6"], "marks": 6, "note": "Sum of square residuals least squares"},
+  "AIHL-2023May-Paper1-TZ1-Q17": {"code": "AHL5.9", "subcodes": ["AHL3.7", "SL3.3"], "marks": 9, "note": "Related rates angle of elevation"},
+  "AIHL-2023May-Paper1-TZ2-Q1": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.6"], "marks": 7, "note": "Quadratic model projectile height"},
+  "AIHL-2023May-Paper1-TZ2-Q2": {"code": "SL4.11", "subcodes": [], "marks": 4, "note": "Chi-squared test for independence"},
+  "AIHL-2023May-Paper1-TZ2-Q3": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 7, "note": "Venn diagram independence conditional probability"},
+  "AIHL-2023May-Paper1-TZ2-Q4": {"code": "SL1.4", "subcodes": [], "marks": 6, "note": "Compound interest and depreciation"},
+  "AIHL-2023May-Paper1-TZ2-Q5": {"code": "SL4.9", "subcodes": [], "marks": 6, "note": "Normal distribution inverse normal"},
+  "AIHL-2023May-Paper1-TZ2-Q6": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "Sphere volume cone surface area"},
+  "AIHL-2023May-Paper1-TZ2-Q7": {"code": "SL4.8", "subcodes": [], "marks": 6, "note": "Binomial distribution expected value"},
+  "AIHL-2023May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14", "AHL1.14"], "marks": 7, "note": "Adjacency matrix counting walks"},
+  "AIHL-2023May-Paper1-TZ2-Q9": {"code": "SL4.10", "subcodes": ["SL4.4", "AHL4.13"], "marks": 9, "note": "Spearman rank coefficient of determination"},
+  "AIHL-2023May-Paper1-TZ2-Q10": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Chi-squared goodness of fit"},
+  "AIHL-2023May-Paper1-TZ2-Q11": {"code": "SL2.5", "subcodes": ["AHL1.13", "SL2.3"], "marks": 6, "note": "Combining sinusoidal AC voltages", "confidence": "low"},
+  "AIHL-2023May-Paper1-TZ2-Q12": {"code": "AHL5.9", "subcodes": ["SL3.1"], "marks": 5, "note": "Related rates inflating sphere"},
+  "AIHL-2023May-Paper1-TZ2-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 7, "note": "Composite matrix transformations determinant area"},
+  "AIHL-2023May-Paper1-TZ2-Q14": {"code": "AHL3.12", "subcodes": ["SL3.3", "AHL3.10"], "marks": 8, "note": "Ship position vectors bearings"},
+  "AIHL-2023May-Paper1-TZ2-Q15": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 6, "note": "Confidence interval for population mean"},
+  "AIHL-2023May-Paper1-TZ2-Q16": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL2.7"], "marks": 9, "note": "Volume of revolution about y-axis"},
+  "AIHL-2023May-Paper1-TZ2-Q17": {"code": "AHL5.14", "subcodes": ["AHL5.16", "AHL5.11"], "marks": 6, "note": "Separation of variables differential equation"},
+  "AIHL-2023May-Paper2-TZ1-Q1": {"code": "SL2.1", "subcodes": ["SL4.4", "SL2.6"], "marks": 13, "note": "Straight line model and regression"},
+  "AIHL-2023May-Paper2-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 15, "note": "Sinusoidal tide depth model"},
+  "AIHL-2023May-Paper2-TZ1-Q3": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.5"], "marks": 17, "note": "Tree diagram testing binomial probability"},
+  "AIHL-2023May-Paper2-TZ1-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14", "SL1.6"], "marks": 17, "note": "TSP bounds, MST, Eulerian trail"},
+  "AIHL-2023May-Paper2-TZ1-Q5": {"code": "AHL4.17", "subcodes": ["SL4.11", "AHL4.14"], "marks": 15, "note": "Poisson chi-squared goodness of fit"},
+  "AIHL-2023May-Paper2-TZ1-Q6": {"code": "AHL5.17", "subcodes": ["AHL1.15", "AHL1.12"], "marks": 15, "note": "Complex eigenvalues, spiral phase portrait"},
+  "AIHL-2023May-Paper2-TZ1-Q7": {"code": "AHL3.9", "subcodes": ["AHL1.14", "SL3.2"], "marks": 18, "note": "Rotation and enlargement matrices, determinant"},
+  "AIHL-2023May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": ["SL3.4", "SL3.1"], "marks": 13, "note": "Sine/cosine rule, triangle area, arc"},
+  "AIHL-2023May-Paper2-TZ2-Q2": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.4"], "marks": 12, "note": "Exponential growth model, bacteria populations"},
+  "AIHL-2023May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL1.8"], "marks": 16, "note": "Optimisation of garden area"},
+  "AIHL-2023May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 19, "note": "Kruskal MST, TSP upper/lower bounds"},
+  "AIHL-2023May-Paper2-TZ2-Q5": {"code": "AHL4.19", "subcodes": ["AHL1.14", "SL1.8"], "marks": 14, "note": "Transition matrix and steady state"},
+  "AIHL-2023May-Paper2-TZ2-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.18"], "marks": 18, "note": "Poisson probabilities, critical region, Type II"},
+  "AIHL-2023May-Paper2-TZ2-Q7": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 18, "note": "Coupled system eigenvectors, phase portrait"},
+  "AIHL-2024May-Paper1-TZ1-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 6, "note": "Compound interest and annuity"},
+  "AIHL-2024May-Paper1-TZ1-Q2": {"code": "SL4.4", "subcodes": [], "marks": 7, "note": "Pearson's r and regression line"},
+  "AIHL-2024May-Paper1-TZ1-Q3": {"code": "AHL4.14", "subcodes": ["SL2.2", "SL4.3"], "marks": 6, "note": "Linear transformation of mean, standard deviation"},
+  "AIHL-2024May-Paper1-TZ1-Q4": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
+  "AIHL-2024May-Paper1-TZ1-Q5": {"code": "SL3.5", "subcodes": ["SL3.6", "SL2.1"], "marks": 6, "note": "Perpendicular bisectors and Voronoi diagram"},
+  "AIHL-2024May-Paper1-TZ1-Q6": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence and series sums"},
+  "AIHL-2024May-Paper1-TZ1-Q7": {"code": "SL2.5", "subcodes": ["AHL1.10", "SL1.5"], "marks": 8, "note": "Direct proportion power models, big cats"},
+  "AIHL-2024May-Paper1-TZ1-Q8": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 5, "note": "Chinese postman problem, odd vertices"},
+  "AIHL-2024May-Paper1-TZ1-Q9": {"code": "AHL5.11", "subcodes": ["SL5.5", "AHL1.9"], "marks": 7, "note": "Integration by substitution, area under curve"},
+  "AIHL-2024May-Paper1-TZ1-Q10": {"code": "SL3.4", "subcodes": ["SL3.2"], "marks": 5, "note": "Arc length in semicircle"},
+  "AIHL-2024May-Paper1-TZ1-Q11": {"code": "AHL3.9", "subcodes": ["AHL3.8", "AHL1.14"], "marks": 8, "note": "Rotation matrices prove double angle"},
+  "AIHL-2024May-Paper1-TZ1-Q12": {"code": "AHL4.13", "subcodes": ["SL2.6", "SL1.5"], "marks": 8, "note": "Sum of square residuals, model comparison"},
+  "AIHL-2024May-Paper1-TZ1-Q13": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL3.2"], "marks": 6, "note": "Modulus, argument, exponential form, Argand"},
+  "AIHL-2024May-Paper1-TZ1-Q14": {"code": "AHL2.8", "subcodes": ["SL1.8", "SL2.5"], "marks": 4, "note": "Transformed displacement graph, cars meeting", "confidence": "low"},
+  "AIHL-2024May-Paper1-TZ1-Q15": {"code": "AHL5.17", "subcodes": ["AHL1.15"], "marks": 6, "note": "Phase portrait trajectories, eigenvector regions"},
+  "AIHL-2024May-Paper1-TZ1-Q16": {"code": "AHL5.9", "subcodes": ["SL5.4", "AHL3.7"], "marks": 8, "note": "Tangent to cosine curve, ladder"},
+  "AIHL-2024May-Paper1-TZ1-Q17": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 9, "note": "Eigenvectors, diagonalization of transition matrix"},
+  "AIHL-2024May-Paper1-TZ2-Q1": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 9, "note": "Compound interest and loan repayments"},
+  "AIHL-2024May-Paper1-TZ2-Q2": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 6, "note": "Binomial probability and expected earnings"},
+  "AIHL-2024May-Paper1-TZ2-Q3": {"code": "SL1.5", "subcodes": ["AHL1.9"], "marks": 7, "note": "pH logarithmic scale calculations"},
+  "AIHL-2024May-Paper1-TZ2-Q4": {"code": "SL4.7", "subcodes": ["SL4.5"], "marks": 7, "note": "Probability distribution and expected value"},
+  "AIHL-2024May-Paper1-TZ2-Q5": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 8, "note": "Geometric growth and infinite sum"},
+  "AIHL-2024May-Paper1-TZ2-Q6": {"code": "SL3.2", "subcodes": ["SL3.4"], "marks": 6, "note": "Triangle area versus sector area"},
+  "AIHL-2024May-Paper1-TZ2-Q7": {"code": "AHL5.16", "subcodes": [], "marks": 4, "note": "Euler's method for differential equation"},
+  "AIHL-2024May-Paper1-TZ2-Q8": {"code": "AHL3.13", "subcodes": ["AHL3.10"], "marks": 10, "note": "Dot and cross products, parallelogram"},
+  "AIHL-2024May-Paper1-TZ2-Q9": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 6, "note": "Poisson probabilities and binomial model"},
+  "AIHL-2024May-Paper1-TZ2-Q10": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.3"], "marks": 9, "note": "Volume of revolution after stretches"},
+  "AIHL-2024May-Paper1-TZ2-Q11": {"code": "SL5.4", "subcodes": ["AHL5.12", "SL5.3"], "marks": 9, "note": "Normal to parabola, enclosed area"},
+  "AIHL-2024May-Paper1-TZ2-Q12": {"code": "AHL3.11", "subcodes": ["AHL3.12", "AHL3.10"], "marks": 7, "note": "Vector line equations, interception point"},
+  "AIHL-2024May-Paper1-TZ2-Q13": {"code": "AHL5.13", "subcodes": ["AHL5.9", "AHL3.7"], "marks": 8, "note": "Kinematics: velocity, distance, average speed"},
+  "AIHL-2024May-Paper1-TZ2-Q14": {"code": "AHL4.13", "subcodes": ["SL2.6", "AHL2.9"], "marks": 6, "note": "Power and exponential regression models"},
+  "AIHL-2024May-Paper1-TZ2-Q15": {"code": "AHL1.13", "subcodes": ["AHL3.9", "AHL1.12"], "marks": 8, "note": "Complex exponential form, rotation matrix"},
+  "AIHL-2024May-Paper2-TZ1-Q1": {"code": "SL4.9", "subcodes": ["SL4.8", "SL2.1"], "marks": 15, "note": "Normal distribution, binomial, linear charge"},
+  "AIHL-2024May-Paper2-TZ1-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.2"], "marks": 12, "note": "Vectors, scalar product angle, sine rule"},
+  "AIHL-2024May-Paper2-TZ1-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL2.5"], "marks": 13, "note": "Profit model optimisation by differentiation"},
+  "AIHL-2024May-Paper2-TZ1-Q4": {"code": "SL4.11", "subcodes": ["SL4.6"], "marks": 12, "note": "Tree diagram and chi-squared goodness-of-fit"},
+  "AIHL-2024May-Paper2-TZ1-Q5": {"code": "AHL5.14", "subcodes": ["AHL5.15", "AHL5.9"], "marks": 13, "note": "Slope field and separation of variables"},
+  "AIHL-2024May-Paper2-TZ1-Q6": {"code": "AHL4.17", "subcodes": ["AHL4.14", "AHL4.15"], "marks": 13, "note": "Poisson, combined variables, central limit"},
+  "AIHL-2024May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["AHL5.9"], "marks": 14, "note": "Volume of revolution and related rates"},
+  "AIHL-2024May-Paper2-TZ1-Q8": {"code": "AHL4.19", "subcodes": ["AHL3.15", "AHL3.14"], "marks": 18, "note": "Adjacency matrix, walks, Markov steady state"},
+  "AIHL-2024May-Paper2-TZ2-Q1": {"code": "SL3.5", "subcodes": ["SL3.3", "SL2.1"], "marks": 14, "note": "Perpendicular bisectors, distance, bearing"},
+  "AIHL-2024May-Paper2-TZ2-Q2": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 15, "note": "Trapezoidal rule, integration, percentage error"},
+  "AIHL-2024May-Paper2-TZ2-Q3": {"code": "SL3.1", "subcodes": ["SL5.7", "AHL5.9", "AHL3.7"], "marks": 22, "note": "Prism volume modelling and trigonometric optimisation", "confidence": "low"},
+  "AIHL-2024May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": ["AHL3.14"], "marks": 12, "note": "Nearest neighbour, Prim's algorithm bounds"},
+  "AIHL-2024May-Paper2-TZ2-Q5": {"code": "AHL1.15", "subcodes": ["AHL4.19", "AHL1.14"], "marks": 16, "note": "Eigenvectors, diagonalization, long-term parking", "confidence": "low"},
+  "AIHL-2024May-Paper2-TZ2-Q6": {"code": "SL1.2", "subcodes": ["SL4.6", "SL4.5"], "marks": 14, "note": "Triangle numbers series and probability", "confidence": "low"},
+  "AIHL-2024May-Paper2-TZ2-Q7": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 17, "note": "Sums of independent normal random variables"},
+  "AIHL-2024Nov-Paper1-TZ0-Q1": {"code": "SL3.2", "subcodes": [], "marks": 5, "note": "Cosine rule and triangle area"},
+  "AIHL-2024Nov-Paper1-TZ0-Q2": {"code": "AHL2.9", "subcodes": ["SL1.5"], "marks": 6, "note": "Exponential decay model, half-life"},
+  "AIHL-2024Nov-Paper1-TZ0-Q3": {"code": "SL4.9", "subcodes": ["SL4.5"], "marks": 7, "note": "Normal distribution, inverse normal"},
+  "AIHL-2024Nov-Paper1-TZ0-Q4": {"code": "SL1.2", "subcodes": ["SL1.4"], "marks": 5, "note": "Arithmetic sequence, simple interest"},
+  "AIHL-2024Nov-Paper1-TZ0-Q5": {"code": "SL3.6", "subcodes": [], "marks": 6, "note": "Voronoi diagram cells and areas"},
+  "AIHL-2024Nov-Paper1-TZ0-Q6": {"code": "AHL2.9", "subcodes": ["SL2.1"], "marks": 4, "note": "Piecewise linear cost model"},
+  "AIHL-2024Nov-Paper1-TZ0-Q7": {"code": "SL1.7", "subcodes": [], "marks": 6, "note": "Annuity withdrawals with technology"},
+  "AIHL-2024Nov-Paper1-TZ0-Q8": {"code": "SL2.5", "subcodes": [], "marks": 7, "note": "Sinusoidal daylight model parameters"},
+  "AIHL-2024Nov-Paper1-TZ0-Q9": {"code": "AHL1.13", "subcodes": ["AHL1.12", "AHL3.9"], "marks": 5, "note": "Complex modulus argument, Argand plot"},
+  "AIHL-2024Nov-Paper1-TZ0-Q10": {"code": "AHL2.7", "subcodes": ["AHL2.8", "AHL1.9"], "marks": 8, "note": "Composite functions with log transformations"},
+  "AIHL-2024Nov-Paper1-TZ0-Q11": {"code": "AHL1.15", "subcodes": ["AHL1.14"], "marks": 8, "note": "Eigenvalues, eigenvectors, diagonalization"},
+  "AIHL-2024Nov-Paper1-TZ0-Q12": {"code": "AHL4.13", "subcodes": ["SL1.3", "SL2.6"], "marks": 7, "note": "Sum of squared residuals, exponential regression"},
+  "AIHL-2024Nov-Paper1-TZ0-Q13": {"code": "AHL2.9", "subcodes": ["SL1.8"], "marks": 6, "note": "Logistic model carrying capacity"},
+  "AIHL-2024Nov-Paper1-TZ0-Q14": {"code": "AHL5.9", "subcodes": ["SL5.4", "SL1.8"], "marks": 8, "note": "Chain rule derivative, normal angle"},
+  "AIHL-2024Nov-Paper1-TZ0-Q15": {"code": "AHL4.14", "subcodes": ["SL4.9"], "marks": 8, "note": "Combinations of normal random variables"},
+  "AIHL-2024Nov-Paper1-TZ0-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.7", "SL2.4"], "marks": 7, "note": "Volume of revolution about y-axis"},
+  "AIHL-2024Nov-Paper1-TZ0-Q17": {"code": "AHL5.16", "subcodes": ["SL2.6"], "marks": 7, "note": "Euler's method, coupled predator-prey"},
+  "AIHL-2024Nov-Paper2-TZ0-Q1": {"code": "SL4.10", "subcodes": ["SL4.2", "SL4.3"], "marks": 14, "note": "Spearman's rank, quartiles, outliers"},
+  "AIHL-2024Nov-Paper2-TZ0-Q2": {"code": "SL5.7", "subcodes": ["SL5.8", "SL5.5", "SL3.1"], "marks": 18, "note": "Optimisation of cylinder surface area"},
+  "AIHL-2024Nov-Paper2-TZ0-Q3": {"code": "SL1.3", "subcodes": ["AHL1.11"], "marks": 15, "note": "Geometric sequences, infinite sum"},
+  "AIHL-2024Nov-Paper2-TZ0-Q4": {"code": "SL3.1", "subcodes": ["SL3.2", "AHL3.8"], "marks": 17, "note": "Pyramid volume, angles, ambiguous case"},
+  "AIHL-2024Nov-Paper2-TZ0-Q5": {"code": "AHL3.12", "subcodes": ["AHL3.13", "AHL3.11"], "marks": 15, "note": "Vector kinematics, closest approach"},
+  "AIHL-2024Nov-Paper2-TZ0-Q6": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 13, "note": "Matrix transformations, rotation and enlargement"},
+  "AIHL-2024Nov-Paper2-TZ0-Q7": {"code": "AHL5.17", "subcodes": ["AHL5.18", "AHL1.15"], "marks": 18, "note": "Phase portrait, coupled second-order system"},
+  "AIHL-2025May-Paper1-TZ1-Q1": {"code": "SL3.4", "subcodes": [], "marks": 6, "note": "Sector area and arc length"},
+  "AIHL-2025May-Paper1-TZ1-Q2": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "Quadratic model of dolphin jump"},
+  "AIHL-2025May-Paper1-TZ1-Q3": {"code": "SL1.7", "subcodes": [], "marks": 8, "note": "Loan amortization, monthly payments"},
+  "AIHL-2025May-Paper1-TZ1-Q4": {"code": "AHL2.9", "subcodes": ["SL2.1", "SL4.3"], "marks": 7, "note": "Piecewise linear cost of hats", "confidence": "low"},
+  "AIHL-2025May-Paper1-TZ1-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 9, "note": "Bearings with cosine and sine rules"},
+  "AIHL-2025May-Paper1-TZ1-Q6": {"code": "AHL2.7", "subcodes": ["SL2.5"], "marks": 6, "note": "Composite functions of discount models"},
+  "AIHL-2025May-Paper1-TZ1-Q7": {"code": "AHL5.13", "subcodes": ["AHL5.10", "SL2.3"], "marks": 8, "note": "Kinematics, velocity graph, distance travelled"},
+  "AIHL-2025May-Paper1-TZ1-Q8": {"code": "SL5.5", "subcodes": ["SL2.4", "SL1.8"], "marks": 7, "note": "Area under cubic and quadratic curves"},
+  "AIHL-2025May-Paper1-TZ1-Q9": {"code": "SL4.8", "subcodes": ["SL4.9", "SL4.6"], "marks": 7, "note": "Normal probability then binomial"},
+  "AIHL-2025May-Paper1-TZ1-Q10": {"code": "AHL2.7", "subcodes": ["AHL1.9", "SL2.2"], "marks": 9, "note": "Log laws and inverse function"},
+  "AIHL-2025May-Paper1-TZ1-Q11": {"code": "AHL1.13", "subcodes": ["AHL1.11", "SL1.3", "AHL1.12"], "marks": 8, "note": "Complex geometric sequence, moduli sum"},
+  "AIHL-2025May-Paper1-TZ1-Q12": {"code": "AHL5.15", "subcodes": ["AHL5.14"], "marks": 7, "note": "Slope field, zero-gradient curve"},
+  "AIHL-2025May-Paper1-TZ1-Q13": {"code": "AHL3.9", "subcodes": ["AHL1.14", "AHL3.7"], "marks": 7, "note": "Matrix rotation and reflection composition"},
+  "AIHL-2025May-Paper1-TZ1-Q14": {"code": "AHL1.13", "subcodes": ["AHL1.12", "SL2.5"], "marks": 6, "note": "Exponential form summing sinusoidal functions"},
+  "AIHL-2025May-Paper1-TZ1-Q15": {"code": "AHL5.18", "subcodes": ["AHL5.16", "SL1.6"], "marks": 8, "note": "Euler method second order ODE"},
+  "AIHL-2025May-Paper1-TZ2-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "Savings annuity and compound interest"},
+  "AIHL-2025May-Paper1-TZ2-Q2": {"code": "AHL3.13", "subcodes": ["AHL3.10", "SL3.1"], "marks": 9, "note": "3D vectors, dot product, angle"},
+  "AIHL-2025May-Paper1-TZ2-Q3": {"code": "SL4.10", "subcodes": [], "marks": 6, "note": "Spearman's rank correlation coefficient"},
+  "AIHL-2025May-Paper1-TZ2-Q4": {"code": "SL3.6", "subcodes": ["SL3.5", "SL3.1"], "marks": 7, "note": "Voronoi diagram vertices equidistant sites"},
+  "AIHL-2025May-Paper1-TZ2-Q5": {"code": "SL1.6", "subcodes": [], "marks": 6, "note": "Upper and lower bounds, speed"},
+  "AIHL-2025May-Paper1-TZ2-Q6": {"code": "AHL4.16", "subcodes": ["AHL4.14"], "marks": 5, "note": "Unbiased variance and confidence interval"},
+  "AIHL-2025May-Paper1-TZ2-Q7": {"code": "AHL5.11", "subcodes": ["SL5.5"], "marks": 7, "note": "Integration by substitution, area"},
+  "AIHL-2025May-Paper1-TZ2-Q8": {"code": "AHL3.15", "subcodes": ["AHL3.14"], "marks": 6, "note": "Adjacency matrix, graph, walks"},
+  "AIHL-2025May-Paper1-TZ2-Q9": {"code": "AHL5.9", "subcodes": ["SL5.2"], "marks": 7, "note": "Related rates of change area"},
+  "AIHL-2025May-Paper1-TZ2-Q10": {"code": "SL2.2", "subcodes": [], "marks": 5, "note": "Function table and inverse values"},
+  "AIHL-2025May-Paper1-TZ2-Q11": {"code": "SL2.4", "subcodes": ["SL1.8", "SL5.6"], "marks": 6, "note": "Cubic roots and turning points", "confidence": "low"},
+  "AIHL-2025May-Paper1-TZ2-Q12": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables, velocity model"},
+  "AIHL-2025May-Paper1-TZ2-Q13": {"code": "AHL4.17", "subcodes": ["SL4.8"], "marks": 9, "note": "Poisson distribution with binomial part"},
+  "AIHL-2025May-Paper1-TZ2-Q14": {"code": "AHL2.10", "subcodes": ["AHL4.13", "AHL1.9"], "marks": 6, "note": "Semi-log versus log-log linearization"},
+  "AIHL-2025May-Paper1-TZ2-Q15": {"code": "SL5.4", "subcodes": ["SL2.1", "SL5.3"], "marks": 8, "note": "Normal to parabola, angle between lines"},
+  "AIHL-2025May-Paper1-TZ2-Q16": {"code": "AHL1.12", "subcodes": ["AHL1.13", "SL2.4"], "marks": 7, "note": "Complex roots, modulus maximized"},
+  "AIHL-2025May-Paper1-TZ3-Q1": {"code": "SL3.2", "subcodes": [], "marks": 9, "note": "Cosine rule, sine rule, distance"},
+  "AIHL-2025May-Paper1-TZ3-Q2": {"code": "SL1.5", "subcodes": ["SL1.1"], "marks": 5, "note": "Logarithmic decibel scale, standard form"},
+  "AIHL-2025May-Paper1-TZ3-Q3": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared test for independence"},
+  "AIHL-2025May-Paper1-TZ3-Q4": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 7, "note": "Box plot, IQR, outliers"},
+  "AIHL-2025May-Paper1-TZ3-Q5": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 8, "note": "Loan amortization, early repayment"},
+  "AIHL-2025May-Paper1-TZ3-Q6": {"code": "SL1.2", "subcodes": ["SL4.8", "SL4.5"], "marks": 6, "note": "Arithmetic series sectors, binomial game"},
+  "AIHL-2025May-Paper1-TZ3-Q7": {"code": "SL4.4", "subcodes": ["SL4.1"], "marks": 7, "note": "Stratified sampling, Pearson r, regression"},
+  "AIHL-2025May-Paper1-TZ3-Q8": {"code": "AHL3.9", "subcodes": ["AHL1.14"], "marks": 5, "note": "Matrix transformations of points"},
+  "AIHL-2025May-Paper1-TZ3-Q9": {"code": "AHL5.9", "subcodes": ["SL5.4"], "marks": 6, "note": "Product chain rule tangent"},
+  "AIHL-2025May-Paper1-TZ3-Q10": {"code": "AHL2.10", "subcodes": ["SL2.5"], "marks": 8, "note": "Inverse square log-log linearization"},
+  "AIHL-2025May-Paper1-TZ3-Q11": {"code": "AHL5.16", "subcodes": ["AHL5.17"], "marks": 6, "note": "Euler method coupled system"},
+  "AIHL-2025May-Paper1-TZ3-Q12": {"code": "AHL4.18", "subcodes": ["AHL4.17"], "marks": 5, "note": "Type I error Poisson"},
+  "AIHL-2025May-Paper1-TZ3-Q13": {"code": "AHL5.14", "subcodes": ["AHL5.11"], "marks": 9, "note": "Separation of variables growth"},
+  "AIHL-2025May-Paper1-TZ3-Q14": {"code": "AHL3.12", "subcodes": ["AHL5.13"], "marks": 8, "note": "Projectile vector kinematics"},
+  "AIHL-2025May-Paper1-TZ3-Q15": {"code": "AHL4.19", "subcodes": ["AHL1.15"], "marks": 6, "note": "Markov chain steady state"},
+  "AIHL-2025May-Paper1-TZ3-Q16": {"code": "AHL5.12", "subcodes": ["AHL2.8", "SL2.4"], "marks": 8, "note": "Volume of revolution between curves"},
+  "AIHL-2025May-Paper2-TZ1-Q1": {"code": "SL4.3", "subcodes": ["SL4.2", "SL4.6", "SL4.5"], "marks": 15, "note": "Frequency table mean box plot"},
+  "AIHL-2025May-Paper2-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 19, "note": "Voronoi diagram fire stations"},
+  "AIHL-2025May-Paper2-TZ1-Q3": {"code": "AHL4.13", "subcodes": ["AHL2.9", "AHL5.10", "AHL5.9"], "marks": 17, "note": "Quadratic regression logistic model"},
+  "AIHL-2025May-Paper2-TZ1-Q4": {"code": "AHL3.12", "subcodes": ["AHL3.11", "AHL3.10"], "marks": 17, "note": "3D vector flight paths"},
+  "AIHL-2025May-Paper2-TZ1-Q5": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 16, "note": "3D prism volume and angle"},
+  "AIHL-2025May-Paper2-TZ1-Q6": {"code": "AHL5.14", "subcodes": ["AHL5.11", "SL1.8"], "marks": 14, "note": "Separation of variables virus model"},
+  "AIHL-2025May-Paper2-TZ1-Q7": {"code": "AHL5.12", "subcodes": ["SL5.5"], "marks": 12, "note": "Volume of revolution table design"},
+  "AIHL-2025May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": [], "marks": 16, "note": "Arithmetic sequences and series"},
+  "AIHL-2025May-Paper2-TZ2-Q2": {"code": "AHL5.12", "subcodes": ["SL2.4", "AHL5.9"], "marks": 12, "note": "Area between curves tangents"},
+  "AIHL-2025May-Paper2-TZ2-Q3": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.9"], "marks": 16, "note": "Optimisation of cylinder surface area"},
+  "AIHL-2025May-Paper2-TZ2-Q4": {"code": "AHL3.16", "subcodes": [], "marks": 13, "note": "Prim algorithm travelling salesman bounds"},
+  "AIHL-2025May-Paper2-TZ2-Q5": {"code": "SL4.11", "subcodes": ["AHL4.18", "SL4.3", "SL4.5"], "marks": 15, "note": "Chi-squared and proportion tests"},
+  "AIHL-2025May-Paper2-TZ2-Q6": {"code": "AHL5.18", "subcodes": ["AHL5.17", "AHL5.16"], "marks": 21, "note": "Second order differential equation"},
+  "AIHL-2025May-Paper2-TZ2-Q7": {"code": "AHL4.19", "subcodes": ["AHL1.15", "AHL1.14"], "marks": 17, "note": "Markov chain steady state"},
+  "AIHL-2025May-Paper2-TZ3-Q1": {"code": "SL5.7", "subcodes": ["SL3.1", "AHL5.10"], "marks": 20, "note": "Optimisation container surface area"},
+  "AIHL-2025May-Paper2-TZ3-Q2": {"code": "SL2.5", "subcodes": ["SL1.6", "SL2.4"], "marks": 15, "note": "Sinusoidal tide model"},
+  "AIHL-2025May-Paper2-TZ3-Q3": {"code": "SL5.8", "subcodes": ["SL2.4", "SL2.5"], "marks": 12, "note": "Trapezoidal rule river cross-section"},
+  "AIHL-2025May-Paper2-TZ3-Q4": {"code": "AHL3.15", "subcodes": ["AHL3.16", "AHL3.14"], "marks": 16, "note": "Adjacency matrix walks and bounds"},
+  "AIHL-2025May-Paper2-TZ3-Q5": {"code": "AHL3.13", "subcodes": ["AHL3.10", "AHL3.11", "AHL3.12"], "marks": 15, "note": "Vector dot product angle", "confidence": "low"},
+  "AIHL-2025May-Paper2-TZ3-Q6": {"code": "SL4.7", "subcodes": ["AHL4.14", "SL4.9", "SL4.6"], "marks": 15, "note": "Expected value normal combinations", "confidence": "low"},
+  "AIHL-2025May-Paper2-TZ3-Q7": {"code": "AHL1.13", "subcodes": ["SL1.3", "AHL1.11", "AHL1.12"], "marks": 17, "note": "Complex exponential form fractal tree"},
+  "AISL-2021May-Paper1-TZ1-Q1": {"code": "SL1.6", "subcodes": [], "marks": 4, "note": "Approximation of pi, percentage error"},
+  "AISL-2021May-Paper1-TZ1-Q2": {"code": "SL4.3", "subcodes": [], "marks": 4, "note": "Mode, mean, standard deviation"},
+  "AISL-2021May-Paper1-TZ1-Q3": {"code": "SL3.1", "subcodes": [], "marks": 6, "note": "Hemisphere total surface area"},
+  "AISL-2021May-Paper1-TZ1-Q4": {"code": "SL2.2", "subcodes": ["SL2.1", "SL2.4"], "marks": 7, "note": "Linear cost function, inverse function"},
+  "AISL-2021May-Paper1-TZ1-Q5": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 6, "note": "Voronoi diagram, edge gradient"},
+  "AISL-2021May-Paper1-TZ1-Q6": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Two-sample t-test, p-value"},
+  "AISL-2021May-Paper1-TZ1-Q7": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.6"], "marks": 6, "note": "Exponential decay model, limitations"},
+  "AISL-2021May-Paper1-TZ1-Q8": {"code": "SL1.2", "subcodes": ["SL1.3"], "marks": 8, "note": "Arithmetic and geometric sequences compared"},
+  "AISL-2021May-Paper1-TZ1-Q9": {"code": "SL1.6", "subcodes": ["SL3.2"], "marks": 5, "note": "Upper bounds, maximum triangle area"},
+  "AISL-2021May-Paper1-TZ1-Q10": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 7, "note": "Dice distribution, expected value, conditional"},
+  "AISL-2021May-Paper1-TZ1-Q11": {"code": "SL2.5", "subcodes": ["SL2.3", "SL2.4"], "marks": 6, "note": "Inverse square model, sketch, inequality", "confidence": "low"},
+  "AISL-2021May-Paper1-TZ1-Q12": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6"], "marks": 8, "note": "Minimising area, differentiation, optimisation"},
+  "AISL-2021May-Paper1-TZ1-Q13": {"code": "SL5.5", "subcodes": ["SL5.2"], "marks": 8, "note": "Integrating derivative, increasing or decreasing"},
+  "AISL-2021May-Paper1-TZ2-Q1": {"code": "SL2.5", "subcodes": ["SL1.3"], "marks": 5, "note": "Exponential decay drug model"},
+  "AISL-2021May-Paper1-TZ2-Q2": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "3D distance and midpoint"},
+  "AISL-2021May-Paper1-TZ2-Q3": {"code": "SL3.1", "subcodes": [], "marks": 7, "note": "Surface area, box and half-cylinder"},
+  "AISL-2021May-Paper1-TZ2-Q4": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 7, "note": "Angles of elevation and depression"},
+  "AISL-2021May-Paper1-TZ2-Q5": {"code": "SL4.2", "subcodes": [], "marks": 5, "note": "Box and whisker diagram, quartiles"},
+  "AISL-2021May-Paper1-TZ2-Q6": {"code": "SL3.5", "subcodes": ["SL2.1", "SL1.8"], "marks": 7, "note": "Perpendicular bisector, intersection with line"},
+  "AISL-2021May-Paper1-TZ2-Q7": {"code": "SL2.2", "subcodes": ["SL2.4"], "marks": 5, "note": "Range and inverse of function"},
+  "AISL-2021May-Paper1-TZ2-Q8": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Two-sample t-test, hypotheses, p-value"},
+  "AISL-2021May-Paper1-TZ2-Q9": {"code": "SL3.4", "subcodes": ["SL3.2"], "marks": 7, "note": "Arc length, sector and segment area"},
+  "AISL-2021May-Paper1-TZ2-Q10": {"code": "SL1.4", "subcodes": [], "marks": 6, "note": "Compound interest, finding rate"},
+  "AISL-2021May-Paper1-TZ2-Q11": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Chi-squared goodness of fit test"},
+  "AISL-2021May-Paper1-TZ2-Q12": {"code": "SL2.4", "subcodes": ["SL2.5", "SL1.8"], "marks": 7, "note": "Quadratic graph, vertex, axis symmetry", "confidence": "low"},
+  "AISL-2021May-Paper1-TZ2-Q13": {"code": "SL5.5", "subcodes": ["SL5.2"], "marks": 7, "note": "Integrating rate of profit change"},
+  "AISL-2021May-Paper2-TZ1-Q1": {"code": "SL4.2", "subcodes": ["SL4.4", "SL4.10", "SL4.1"], "marks": 18, "note": "Box plot, outlier, regression, Spearman"},
+  "AISL-2021May-Paper2-TZ1-Q2": {"code": "SL3.4", "subcodes": ["SL3.2", "SL2.5", "SL2.4"], "marks": 17, "note": "Arc, sector, cosine rule, sinusoidal"},
+  "AISL-2021May-Paper2-TZ1-Q3": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 19, "note": "Compound interest, loan amortization"},
+  "AISL-2021May-Paper2-TZ1-Q4": {"code": "SL4.9", "subcodes": ["SL4.11"], "marks": 13, "note": "Normal distribution, chi-squared goodness of fit"},
+  "AISL-2021May-Paper2-TZ1-Q5": {"code": "SL5.6", "subcodes": ["SL5.8", "SL5.5", "SL5.3"], "marks": 13, "note": "Cubic maximum, trapezoidal rule, integration"},
+  "AISL-2021May-Paper2-TZ2-Q1": {"code": "SL4.6", "subcodes": ["SL4.1"], "marks": 19, "note": "Tree diagram, conditional probability, Venn"},
+  "AISL-2021May-Paper2-TZ2-Q2": {"code": "SL3.2", "subcodes": [], "marks": 15, "note": "Cosine rule, sine rule, triangle area"},
+  "AISL-2021May-Paper2-TZ2-Q3": {"code": "SL1.3", "subcodes": ["SL1.2"], "marks": 16, "note": "Arithmetic seating, geometric growth series"},
+  "AISL-2021May-Paper2-TZ2-Q4": {"code": "SL4.9", "subcodes": ["SL4.8"], "marks": 14, "note": "Normal distribution, inverse normal, binomial"},
+  "AISL-2021May-Paper2-TZ2-Q5": {"code": "SL5.7", "subcodes": ["SL3.1", "SL5.3", "SL2.3"], "marks": 16, "note": "Prism volume optimisation using derivative"},
+  "AISL-2022May-Paper1-TZ1-Q1": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "Roof surface area, Pythagoras"},
+  "AISL-2022May-Paper1-TZ1-Q2": {"code": "SL3.1", "subcodes": [], "marks": 4, "note": "3D coordinates, distance and angle"},
+  "AISL-2022May-Paper1-TZ1-Q3": {"code": "SL2.5", "subcodes": ["SL2.2", "SL2.4"], "marks": 5, "note": "Quadratic height model, domain"},
+  "AISL-2022May-Paper1-TZ1-Q4": {"code": "SL3.5", "subcodes": ["SL2.1"], "marks": 7, "note": "Perpendicular bisector equation, point on line"},
+  "AISL-2022May-Paper1-TZ1-Q5": {"code": "SL1.8", "subcodes": [], "marks": 5, "note": "System of three linear equations"},
+  "AISL-2022May-Paper1-TZ1-Q6": {"code": "SL5.8", "subcodes": ["SL5.5"], "marks": 7, "note": "Trapezoidal rule, exact integral area"},
+  "AISL-2022May-Paper1-TZ1-Q7": {"code": "SL4.11", "subcodes": [], "marks": 7, "note": "Chi-squared goodness of fit test"},
+  "AISL-2022May-Paper1-TZ1-Q8": {"code": "SL4.9", "subcodes": [], "marks": 6, "note": "Normal distribution, inverse normal"},
+  "AISL-2022May-Paper1-TZ1-Q9": {"code": "SL5.4", "subcodes": ["SL5.3"], "marks": 7, "note": "Derivative, equation of normal"},
+  "AISL-2022May-Paper1-TZ1-Q10": {"code": "SL4.6", "subcodes": [], "marks": 6, "note": "Tree diagram, conditional probability"},
+  "AISL-2022May-Paper1-TZ1-Q11": {"code": "SL1.5", "subcodes": ["SL2.2"], "marks": 8, "note": "Logarithms base 10, exponents"},
+  "AISL-2022May-Paper1-TZ1-Q12": {"code": "SL5.5", "subcodes": ["SL5.2"], "marks": 6, "note": "Increasing or decreasing, integration constant"},
+  "AISL-2022May-Paper1-TZ1-Q13": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence and series, bouncing ball"},
+  "AISL-2022May-Paper1-TZ2-Q1": {"code": "SL3.4", "subcodes": [], "marks": 5, "note": "Arc length, sector area difference"},
+  "AISL-2022May-Paper1-TZ2-Q2": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 6, "note": "Two-way table, conditional probability"},
+  "AISL-2022May-Paper1-TZ2-Q3": {"code": "SL3.3", "subcodes": ["SL3.2", "SL3.1"], "marks": 8, "note": "Angle of depression, right triangles"},
+  "AISL-2022May-Paper1-TZ2-Q4": {"code": "SL1.5", "subcodes": [], "marks": 5, "note": "Logarithms base 10, pH scale"},
+  "AISL-2022May-Paper1-TZ2-Q5": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 7, "note": "Binomial distribution, expected value"},
+  "AISL-2022May-Paper1-TZ2-Q6": {"code": "SL5.5", "subcodes": ["SL2.4"], "marks": 7, "note": "Integration, area between curves"},
+  "AISL-2022May-Paper1-TZ2-Q7": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 5, "note": "Box plots, outliers, comparison"},
+  "AISL-2022May-Paper1-TZ2-Q8": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "Two-sample t-test, p-value"},
+  "AISL-2022May-Paper1-TZ2-Q9": {"code": "SL2.5", "subcodes": ["SL1.8", "SL2.4"], "marks": 8, "note": "Cubic model, simultaneous equations"},
+  "AISL-2022May-Paper1-TZ2-Q10": {"code": "SL4.9", "subcodes": [], "marks": 5, "note": "Normal distribution, inverse normal"},
+  "AISL-2022May-Paper1-TZ2-Q11": {"code": "SL5.3", "subcodes": ["SL5.4"], "marks": 7, "note": "Differentiation, gradient of tangent"},
+  "AISL-2022May-Paper1-TZ2-Q12": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 5, "note": "Quadratic model, axis of symmetry"},
+  "AISL-2022May-Paper1-TZ2-Q13": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 6, "note": "Compound interest, inflation, annuity"},
+  "AISL-2022May-Paper2-TZ1-Q1": {"code": "SL2.5", "subcodes": ["SL2.4", "SL1.6"], "marks": 15, "note": "Sinusoidal model, percentage error"},
+  "AISL-2022May-Paper2-TZ1-Q2": {"code": "SL1.2", "subcodes": ["SL1.1"], "marks": 19, "note": "Arithmetic sequences, standard form, cost"},
+  "AISL-2022May-Paper2-TZ1-Q3": {"code": "SL4.10", "subcodes": ["SL4.3", "SL4.4"], "marks": 16, "note": "Spearman rank, quartiles, Pearson"},
+  "AISL-2022May-Paper2-TZ1-Q4": {"code": "SL3.4", "subcodes": ["SL3.2", "SL5.6"], "marks": 15, "note": "Sector, segment area, maximum rate"},
+  "AISL-2022May-Paper2-TZ1-Q5": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 15, "note": "Binomial distribution, expected value"},
+  "AISL-2022May-Paper2-TZ2-Q1": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 17, "note": "Cumulative frequency, median, mean"},
+  "AISL-2022May-Paper2-TZ2-Q2": {"code": "SL1.2", "subcodes": ["SL1.3"], "marks": 13, "note": "Arithmetic and geometric sequences"},
+  "AISL-2022May-Paper2-TZ2-Q3": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1", "SL3.2"], "marks": 18, "note": "Voronoi diagram, lines, triangle area"},
+  "AISL-2022May-Paper2-TZ2-Q4": {"code": "SL2.5", "subcodes": ["SL2.2", "SL2.4"], "marks": 17, "note": "Sinusoidal model, domain and range"},
+  "AISL-2022May-Paper2-TZ2-Q5": {"code": "SL5.7", "subcodes": ["SL5.3", "SL2.4"], "marks": 15, "note": "Optimisation of profit, cubic graph"},
+  "AISL-2023May-Paper1-TZ1-Q1": {"code": "SL4.10", "subcodes": [], "marks": 6, "note": "Spearman rank correlation, ranking"},
+  "AISL-2023May-Paper1-TZ1-Q2": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 6, "note": "Angles of elevation, sine rule"},
+  "AISL-2023May-Paper1-TZ1-Q3": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 5, "note": "Annuity, monthly compound interest"},
+  "AISL-2023May-Paper1-TZ1-Q4": {"code": "SL4.11", "subcodes": [], "marks": 6, "note": "One-tailed t-test, p-value"},
+  "AISL-2023May-Paper1-TZ1-Q5": {"code": "SL5.4", "subcodes": ["SL2.1"], "marks": 5, "note": "Tangent and normal, perpendicular gradients"},
+  "AISL-2023May-Paper1-TZ1-Q6": {"code": "SL2.5", "subcodes": ["SL2.6"], "marks": 5, "note": "Quadratic proportion model, stopping distance"},
+  "AISL-2023May-Paper1-TZ1-Q7": {"code": "SL5.7", "subcodes": ["SL2.2", "SL2.4"], "marks": 6, "note": "Optimisation, maximum volume of box"},
+  "AISL-2023May-Paper1-TZ1-Q8": {"code": "SL1.5", "subcodes": ["SL1.1", "SL2.2"], "marks": 7, "note": "Logarithms, exponential form, standard form"},
+  "AISL-2023May-Paper1-TZ1-Q9": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 8, "note": "Trapezoidal rule, integration, percentage error"},
+  "AISL-2023May-Paper1-TZ1-Q10": {"code": "SL2.5", "subcodes": ["SL2.1", "SL2.4"], "marks": 7, "note": "Linear and quadratic path models"},
+  "AISL-2023May-Paper1-TZ1-Q11": {"code": "SL1.6", "subcodes": ["SL3.1"], "marks": 7, "note": "Upper and lower bounds, pyramid"},
+  "AISL-2023May-Paper1-TZ1-Q12": {"code": "SL4.9", "subcodes": [], "marks": 7, "note": "Normal distribution, inverse normal"},
+  "AISL-2023May-Paper1-TZ1-Q13": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 5, "note": "Bearings, cosine rule, sine rule"},
+  "AISL-2023May-Paper1-TZ2-Q1": {"code": "SL1.6", "subcodes": ["SL1.1"], "marks": 5, "note": "Percentage error, standard form"},
+  "AISL-2023May-Paper1-TZ2-Q2": {"code": "SL1.4", "subcodes": [], "marks": 6, "note": "Compound interest, annual depreciation rate"},
+  "AISL-2023May-Paper1-TZ2-Q3": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 7, "note": "Cumulative frequency, quartiles, outliers"},
+  "AISL-2023May-Paper1-TZ2-Q4": {"code": "SL4.10", "subcodes": ["SL4.4"], "marks": 6, "note": "Spearman's rank correlation coefficient"},
+  "AISL-2023May-Paper1-TZ2-Q5": {"code": "SL4.3", "subcodes": [], "marks": 4, "note": "Mean from frequency distribution table"},
+  "AISL-2023May-Paper1-TZ2-Q6": {"code": "SL4.11", "subcodes": ["SL4.6"], "marks": 6, "note": "Chi-squared test, conditional probability"},
+  "AISL-2023May-Paper1-TZ2-Q7": {"code": "SL3.6", "subcodes": ["SL3.5", "SL1.8"], "marks": 6, "note": "Voronoi diagram, perpendicular bisectors"},
+  "AISL-2023May-Paper1-TZ2-Q8": {"code": "SL3.1", "subcodes": [], "marks": 5, "note": "Sphere volume, cone surface area"},
+  "AISL-2023May-Paper1-TZ2-Q9": {"code": "SL4.9", "subcodes": [], "marks": 6, "note": "Normal distribution, inverse normal"},
+  "AISL-2023May-Paper1-TZ2-Q10": {"code": "SL2.5", "subcodes": ["SL2.4", "SL2.6"], "marks": 8, "note": "Quadratic model, maximum, model limitations"},
+  "AISL-2023May-Paper1-TZ2-Q11": {"code": "SL2.3", "subcodes": ["SL2.4"], "marks": 7, "note": "Graphing function, minimum, vertical asymptote"},
+  "AISL-2023May-Paper1-TZ2-Q12": {"code": "SL4.7", "subcodes": [], "marks": 5, "note": "Discrete random variable, expected gain"},
+  "AISL-2023May-Paper1-TZ2-Q13": {"code": "SL5.5", "subcodes": ["SL5.8"], "marks": 9, "note": "Trapezoidal rule, integration, cross-sectional area"},
+  "AISL-2023May-Paper2-TZ1-Q1": {"code": "SL4.4", "subcodes": ["SL2.1"], "marks": 15, "note": "Regression line, Pearson's r, gradient"},
+  "AISL-2023May-Paper2-TZ1-Q2": {"code": "SL2.3", "subcodes": ["SL2.4", "SL2.5", "SL5.4"], "marks": 16, "note": "Graphs, asymptotes, exponential model, tangent"},
+  "AISL-2023May-Paper2-TZ1-Q3": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 15, "note": "Sinusoidal tide model, amplitude, period"},
+  "AISL-2023May-Paper2-TZ1-Q4": {"code": "SL4.6", "subcodes": ["SL4.8", "SL4.7"], "marks": 17, "note": "Tree diagram, conditional probability, binomial"},
+  "AISL-2023May-Paper2-TZ1-Q5": {"code": "SL5.7", "subcodes": ["SL5.3", "SL3.1"], "marks": 17, "note": "Optimisation, minimising material cost"},
+  "AISL-2023May-Paper2-TZ2-Q1": {"code": "SL3.2", "subcodes": ["SL3.4"], "marks": 17, "note": "Sine rule, triangle area, arc"},
+  "AISL-2023May-Paper2-TZ2-Q2": {"code": "SL1.2", "subcodes": ["SL1.3"], "marks": 15, "note": "Arithmetic series, geometric series"},
+  "AISL-2023May-Paper2-TZ2-Q3": {"code": "SL2.5", "subcodes": ["SL1.5", "SL2.4", "SL1.1"], "marks": 15, "note": "Exponential growth model, bacteria"},
+  "AISL-2023May-Paper2-TZ2-Q4": {"code": "SL4.8", "subcodes": ["SL4.11"], "marks": 17, "note": "Binomial distribution, two-sample t-test"},
+  "AISL-2023May-Paper2-TZ2-Q5": {"code": "SL5.7", "subcodes": ["SL5.3", "SL1.8"], "marks": 16, "note": "Optimisation of garden area"},
+  "AISL-2024May-Paper1-TZ1-Q1": {"code": "SL4.3", "subcodes": ["SL1.6"], "marks": 7, "note": "Mean, median, mode, range"},
+  "AISL-2024May-Paper1-TZ1-Q2": {"code": "SL4.6", "subcodes": ["SL4.5"], "marks": 6, "note": "Venn diagram, union, mutually exclusive"},
+  "AISL-2024May-Paper1-TZ1-Q3": {"code": "SL1.3", "subcodes": [], "marks": 7, "note": "Geometric sequence and sums"},
+  "AISL-2024May-Paper1-TZ1-Q4": {"code": "SL2.5", "subcodes": ["SL2.3", "SL2.4"], "marks": 7, "note": "Exponential model, graph, asymptote"},
+  "AISL-2024May-Paper1-TZ1-Q5": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 6, "note": "Compound interest and annuity"},
+  "AISL-2024May-Paper1-TZ1-Q6": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1", "SL1.8"], "marks": 6, "note": "Voronoi diagram, perpendicular bisectors"},
+  "AISL-2024May-Paper1-TZ1-Q7": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 6, "note": "Sinusoidal model of water depth"},
+  "AISL-2024May-Paper1-TZ1-Q8": {"code": "SL2.2", "subcodes": ["SL4.3", "SL2.1"], "marks": 6, "note": "Inverse linear function, mean, deviation", "confidence": "low"},
+  "AISL-2024May-Paper1-TZ1-Q9": {"code": "SL5.3", "subcodes": ["SL5.1", "SL3.1", "SL2.6"], "marks": 8, "note": "Differentiating volume, rate of change"},
+  "AISL-2024May-Paper1-TZ1-Q10": {"code": "SL2.5", "subcodes": ["SL1.5"], "marks": 8, "note": "Direct proportion, cube and square"},
+  "AISL-2024May-Paper1-TZ1-Q11": {"code": "SL3.4", "subcodes": ["SL3.2"], "marks": 5, "note": "Arc length in semicircle"},
+  "AISL-2024May-Paper1-TZ1-Q12": {"code": "SL4.7", "subcodes": ["SL1.2", "SL1.8"], "marks": 8, "note": "Expected value, fair game, prizes"},
+  "AISL-2024May-Paper1-TZ2-Q1": {"code": "SL4.3", "subcodes": [], "marks": 7, "note": "Range, mean, standard deviation"},
+  "AISL-2024May-Paper1-TZ2-Q2": {"code": "SL3.2", "subcodes": [], "marks": 6, "note": "Cosine rule and sine rule"},
+  "AISL-2024May-Paper1-TZ2-Q3": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Chi-squared test for independence"},
+  "AISL-2024May-Paper1-TZ2-Q4": {"code": "SL2.5", "subcodes": [], "marks": 6, "note": "Direct and inverse variation"},
+  "AISL-2024May-Paper1-TZ2-Q5": {"code": "SL1.4", "subcodes": ["SL1.7"], "marks": 9, "note": "Compound interest and loan repayments"},
+  "AISL-2024May-Paper1-TZ2-Q6": {"code": "SL4.8", "subcodes": ["SL4.7"], "marks": 6, "note": "Binomial probability, expected earnings"},
+  "AISL-2024May-Paper1-TZ2-Q7": {"code": "SL1.5", "subcodes": [], "marks": 7, "note": "Logarithms base ten, pH"},
+  "AISL-2024May-Paper1-TZ2-Q8": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 7, "note": "Probability distribution, expected value"},
+  "AISL-2024May-Paper1-TZ2-Q9": {"code": "SL1.2", "subcodes": ["SL1.3"], "marks": 6, "note": "Arithmetic versus geometric sequence comparison"},
+  "AISL-2024May-Paper1-TZ2-Q10": {"code": "SL5.4", "subcodes": ["SL5.3", "SL1.8"], "marks": 7, "note": "Normal to curve, simultaneous equations"},
+  "AISL-2024May-Paper1-TZ2-Q11": {"code": "SL3.2", "subcodes": ["SL3.4"], "marks": 6, "note": "Triangle area, sector area comparison"},
+  "AISL-2024May-Paper1-TZ2-Q12": {"code": "SL5.7", "subcodes": ["SL5.3", "SL5.6"], "marks": 8, "note": "Optimisation of carpet area"},
+  "AISL-2024May-Paper2-TZ1-Q1": {"code": "SL4.4", "subcodes": ["SL4.10", "SL4.11"], "marks": 19, "note": "Regression, Pearson, Spearman, t-test"},
+  "AISL-2024May-Paper2-TZ1-Q2": {"code": "SL4.9", "subcodes": ["SL4.8", "SL2.5"], "marks": 15, "note": "Normal distribution, inverse normal, binomial"},
+  "AISL-2024May-Paper2-TZ1-Q3": {"code": "SL5.7", "subcodes": ["SL5.3", "SL2.5"], "marks": 13, "note": "Profit model, differentiation, maximisation"},
+  "AISL-2024May-Paper2-TZ1-Q4": {"code": "SL4.6", "subcodes": ["SL4.11", "SL4.5"], "marks": 12, "note": "Tree diagram, chi-squared goodness of fit"},
+  "AISL-2024May-Paper2-TZ1-Q5": {"code": "SL5.5", "subcodes": ["SL5.1", "SL1.8", "SL3.1"], "marks": 21, "note": "Integration, area, volume, simultaneous equations"},
+  "AISL-2024May-Paper2-TZ2-Q1": {"code": "SL4.6", "subcodes": ["SL2.5", "SL2.6"], "marks": 16, "note": "Venn diagram, conditional probability, exponential model"},
+  "AISL-2024May-Paper2-TZ2-Q2": {"code": "SL3.5", "subcodes": ["SL3.3", "SL2.1"], "marks": 14, "note": "Perpendicular bisectors, bearings, distance"},
+  "AISL-2024May-Paper2-TZ2-Q3": {"code": "SL5.8", "subcodes": ["SL5.5", "SL1.6"], "marks": 15, "note": "Trapezoidal rule, integration, percentage error"},
+  "AISL-2024May-Paper2-TZ2-Q4": {"code": "SL4.9", "subcodes": ["SL4.11"], "marks": 19, "note": "Normal distribution, chi-squared, t-test"},
+  "AISL-2024May-Paper2-TZ2-Q5": {"code": "SL3.1", "subcodes": ["SL3.2", "SL2.4"], "marks": 16, "note": "Prism volume, trigonometry, maximum from graph"},
+  "AISL-2025May-Paper1-TZ1-Q1": {"code": "SL4.4", "subcodes": [], "marks": 6, "note": "Pearson correlation, regression line prediction"},
+  "AISL-2025May-Paper1-TZ1-Q2": {"code": "SL4.11", "subcodes": [], "marks": 5, "note": "Chi-squared test for independence"},
+  "AISL-2025May-Paper1-TZ1-Q3": {"code": "SL1.8", "subcodes": [], "marks": 5, "note": "System of three linear equations"},
+  "AISL-2025May-Paper1-TZ1-Q4": {"code": "SL2.5", "subcodes": ["SL2.1"], "marks": 5, "note": "Gradient of slope, inverse proportion", "confidence": "low"},
+  "AISL-2025May-Paper1-TZ1-Q5": {"code": "SL2.5", "subcodes": ["SL2.4"], "marks": 7, "note": "Quadratic model, axis of symmetry"},
+  "AISL-2025May-Paper1-TZ1-Q6": {"code": "SL3.4", "subcodes": [], "marks": 6, "note": "Sector area and arc length"},
+  "AISL-2025May-Paper1-TZ1-Q7": {"code": "SL4.8", "subcodes": [], "marks": 5, "note": "Binomial distribution probabilities, conditions"},
+  "AISL-2025May-Paper1-TZ1-Q8": {"code": "SL5.3", "subcodes": ["SL5.1", "SL5.2"], "marks": 7, "note": "Differentiation, gradient, increasing function"},
+  "AISL-2025May-Paper1-TZ1-Q9": {"code": "SL5.5", "subcodes": ["SL2.4"], "marks": 4, "note": "Cubic root, area under curve"},
+  "AISL-2025May-Paper1-TZ1-Q10": {"code": "SL2.5", "subcodes": ["SL1.8"], "marks": 7, "note": "Piecewise linear cost model"},
+  "AISL-2025May-Paper1-TZ1-Q11": {"code": "SL1.6", "subcodes": ["SL1.5"], "marks": 5, "note": "Percentage error bounds, natural logarithm"},
+  "AISL-2025May-Paper1-TZ1-Q12": {"code": "SL5.7", "subcodes": ["SL5.5", "SL3.1"], "marks": 9, "note": "Maximum volume, integration of derivative"},
+  "AISL-2025May-Paper1-TZ1-Q13": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 9, "note": "Bearings, cosine rule, navigation"},
+  "AISL-2025May-Paper1-TZ2-Q1": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 7, "note": "Annuity savings plan, compound interest"},
+  "AISL-2025May-Paper1-TZ2-Q2": {"code": "SL4.7", "subcodes": ["SL4.5", "SL4.6"], "marks": 8, "note": "Discrete distribution, expected value, conditional"},
+  "AISL-2025May-Paper1-TZ2-Q3": {"code": "SL1.3", "subcodes": [], "marks": 6, "note": "Geometric sequence, percentage growth"},
+  "AISL-2025May-Paper1-TZ2-Q4": {"code": "SL4.11", "subcodes": [], "marks": 8, "note": "Chi-squared independence test"},
+  "AISL-2025May-Paper1-TZ2-Q5": {"code": "SL3.3", "subcodes": ["SL3.2"], "marks": 8, "note": "Bearings, cosine rule, sine rule"},
+  "AISL-2025May-Paper1-TZ2-Q6": {"code": "SL1.6", "subcodes": [], "marks": 6, "note": "Upper and lower bounds, speed"},
+  "AISL-2025May-Paper1-TZ2-Q7": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 9, "note": "Voronoi diagram, vertices, boundaries"},
+  "AISL-2025May-Paper1-TZ2-Q8": {"code": "SL4.2", "subcodes": ["SL4.3"], "marks": 8, "note": "Cumulative frequency, quartiles, estimated mean"},
+  "AISL-2025May-Paper1-TZ2-Q9": {"code": "SL2.2", "subcodes": [], "marks": 5, "note": "Function table, inverse function"},
+  "AISL-2025May-Paper1-TZ2-Q10": {"code": "SL4.10", "subcodes": [], "marks": 6, "note": "Spearman's rank correlation coefficient"},
+  "AISL-2025May-Paper1-TZ2-Q11": {"code": "SL3.1", "subcodes": ["SL3.2"], "marks": 9, "note": "3D coordinates, distance, angle"},
+  "AISL-2025May-Paper2-TZ1-Q1": {"code": "SL4.3", "subcodes": ["SL4.2", "SL4.6", "SL4.5"], "marks": 15, "note": "Mean from frequency table, box plot, probability"},
+  "AISL-2025May-Paper2-TZ1-Q2": {"code": "SL1.7", "subcodes": ["SL1.4"], "marks": 15, "note": "Compound interest, loan amortization"},
+  "AISL-2025May-Paper2-TZ1-Q3": {"code": "SL1.3", "subcodes": ["SL1.2"], "marks": 17, "note": "Geometric and arithmetic sequences, series"},
+  "AISL-2025May-Paper2-TZ1-Q4": {"code": "SL3.1", "subcodes": [], "marks": 14, "note": "3D coordinates, prism volume, cost"},
+  "AISL-2025May-Paper2-TZ1-Q5": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 19, "note": "Voronoi diagram, perpendicular bisector, area"},
+  "AISL-2025May-Paper2-TZ2-Q1": {"code": "SL1.2", "subcodes": [], "marks": 16, "note": "Arithmetic sequence and series, expressions"},
+  "AISL-2025May-Paper2-TZ2-Q2": {"code": "SL5.5", "subcodes": ["SL2.4", "SL5.3", "SL5.4"], "marks": 12, "note": "Area between curves, integration, tangents"},
+  "AISL-2025May-Paper2-TZ2-Q3": {"code": "SL4.9", "subcodes": ["SL4.8", "SL4.6"], "marks": 20, "note": "Normal distribution, inverse normal, binomial"},
+  "AISL-2025May-Paper2-TZ2-Q4": {"code": "SL2.5", "subcodes": ["SL3.2", "SL2.4"], "marks": 16, "note": "Sinusoidal modelling, clock, cosine rule"},
+  "AISL-2025May-Paper2-TZ2-Q5": {"code": "SL5.7", "subcodes": ["SL3.1", "SL5.3"], "marks": 16, "note": "Optimisation, cylinder hemisphere surface area"}
 };
 
 const TOPIC_NAMES = {};
@@ -876,10 +1098,25 @@ let manualSelected = new Set();
 let modalContextList = [];
 let currentModalIsManual = false;
 let modalSubcodes = new Set();
+let modalCourse = '';   // 'AISL' restricts the pickers to SL-only syllabus items
 
 // ============================================================
 // PRESET TAG MERGE
 // ============================================================
+// v1 tag keys had no course prefix (HL only). Migrate them to AIHL-… once.
+function migrateTagKeys() {
+  let changed = false;
+  for (const k of Object.keys(tagDB)) {
+    if (/^(AIHL|AISL)-/.test(k)) continue;
+    if (!/^\d{4}[A-Za-z]+-Paper\d-TZ\d-Q\d+$/.test(k)) continue;
+    const nk = 'AIHL-' + k;
+    if (!tagDB[nk]) tagDB[nk] = tagDB[k];
+    delete tagDB[k];
+    changed = true;
+  }
+  if (changed) saveTags();
+}
+
 function mergePresetTags(force) {
   const done = localStorage.getItem(PRESET_KEY);
   if (!force && done === PRESET_VERSION) return 0;
@@ -990,6 +1227,9 @@ async function collectPngs(handle, out, depth) {
     if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.png')) {
       out.push(await entry.getFile());
     } else if (entry.kind === 'directory') {
+      // Folders starting with "_" (e.g. _normalized) are skipped so that selecting
+      // the parent folder never loads the same question twice.
+      if (entry.name.startsWith('_')) continue;
       await collectPngs(entry, out, depth + 1);
     }
   }
@@ -1106,19 +1346,21 @@ async function refreshSavedFoldersList() {
 // 2022May-AIHL-Paper2-TZ1-Q1-p2.png     (multi-page question)
 // 2023May-AIHL-Paper1-TZ1-Q5MS-p2.png   (multi-page mark scheme)
 // ============================================================
-const FILE_RE = /^(\d{4})([A-Za-z]+)-AI(?:HL|SL)-(Paper\d)(?:-(TZ\d))?-Q(\d+)(?:-p?(\d+))?(MS)?(?:-p?(\d+))?$/i;
+const FILE_RE = /^(\d{4})([A-Za-z]+)-(AIHL|AISL)-(Paper\d)(?:-(TZ\d))?-Q(\d+)(?:-p?(\d+))?(MS)?(?:-p?(\d+))?$/i;
+const COURSE_SHORT = { AIHL: 'HL', AISL: 'SL' };
 
 function parseFilename(name) {
   const base = name.replace(/\.png$/i, '');
   const m = base.match(FILE_RE);
   if (!m) return null;
-  const tz = m[4] ? m[4].toUpperCase() : 'TZ0';
+  const course = m[3].toUpperCase();
+  const tz = m[5] ? m[5].toUpperCase() : 'TZ0';
   return {
-    year: m[1], month: m[2], paper: m[3], tz, qnum: m[5],
-    part: parseInt(m[6] || m[8] || '1', 10),
-    isMs: !!m[7],
-    session: `${m[1]}${m[2]}-${m[3]}-${tz}`,
-    qid: `${m[1]}${m[2]}-${m[3]}-${tz}-Q${m[5]}`,
+    course, year: m[1], month: m[2], paper: m[4], tz, qnum: m[6],
+    part: parseInt(m[7] || m[9] || '1', 10),
+    isMs: !!m[8],
+    session: `${course}-${m[1]}${m[2]}-${m[4]}-${tz}`,
+    qid: `${course}-${m[1]}${m[2]}-${m[4]}-${tz}-Q${m[6]}`,
     name
   };
 }
@@ -1130,7 +1372,7 @@ function rebuildQuestions() {
     if (!p) continue;
     if (!map.has(p.qid)) {
       map.set(p.qid, {
-        id: p.qid, year: p.year, month: p.month, paper: p.paper, tz: p.tz, qnum: p.qnum,
+        id: p.qid, course: p.course, year: p.year, month: p.month, paper: p.paper, tz: p.tz, qnum: p.qnum,
         session: p.session, qFiles: [], msFiles: []
       });
     }
@@ -1140,10 +1382,12 @@ function rebuildQuestions() {
   questions = [...map.values()].map(q => {
     q.qFiles.sort(sortByPart);
     q.msFiles.sort(sortByPart);
-    q.displayName = `${q.year}${q.month} ${q.paper} ${q.tz === 'TZ0' ? '' : q.tz + ' '}Q${q.qnum}`.replace(/\s+/g, ' ').trim();
+    q.courseShort = COURSE_SHORT[q.course] || q.course;
+    q.displayName = `${q.courseShort} ${q.year}${q.month} ${q.paper} ${q.tz === 'TZ0' ? '' : q.tz + ' '}Q${q.qnum}`.replace(/\s+/g, ' ').trim();
     return q;
   });
   questions.sort((a, b) => {
+    if (a.course !== b.course) return a.course.localeCompare(b.course);
     if (a.year !== b.year) return a.year.localeCompare(b.year);
     if (a.month !== b.month) return a.month.localeCompare(b.month);
     if (a.paper !== b.paper) return a.paper.localeCompare(b.paper);
@@ -1243,15 +1487,17 @@ function refreshCodeFilter() {
 // ============================================================
 function renderStats() {
   const total = questions.length;
-  let tagged = 0, marksKnown = 0;
+  let tagged = 0, hl = 0, sl = 0;
   const byTopic = {1:0,2:0,3:0,4:0,5:0};
   for (const q of questions) {
     const t = getTag(q.id);
     if (t.code) { tagged++; byTopic[codeTopic(t.code)]++; }
-    if (t.marks) marksKnown++;
+    if (q.course === 'AIHL') hl++; else if (q.course === 'AISL') sl++;
   }
   document.getElementById('statsBox').innerHTML = `
     <div class="stat"><div class="num">${total}</div><div class="lbl">Total questions</div></div>
+    <div class="stat"><div class="num" style="color:#4c1d95">${hl}</div><div class="lbl">AI HL</div></div>
+    <div class="stat"><div class="num" style="color:#0e7490">${sl}</div><div class="lbl">AI SL</div></div>
     <div class="stat"><div class="num" style="color:var(--green)">${tagged}</div><div class="lbl">Tagged</div></div>
     <div class="stat"><div class="num" style="color:var(--orange)">${total-tagged}</div><div class="lbl">Untagged</div></div>
     <div class="stat"><div class="num" style="color:var(--t1)">${byTopic[1]}</div><div class="lbl">T1 N&amp;A</div></div>
@@ -1266,6 +1512,7 @@ function renderStats() {
 // ============================================================
 function applyFilter() {
   const search  = document.getElementById('searchInput').value.trim().toLowerCase();
+  const fcourse = document.getElementById('filterCourse').value;
   const fp      = document.getElementById('filterPaper').value;
   const flevel  = document.getElementById('filterLevel').value;
   const ftopic  = document.getElementById('filterTopic').value;
@@ -1276,6 +1523,7 @@ function applyFilter() {
   const inclSub = document.getElementById('inclSub').checked;
 
   visibleQuestions = questions.filter(q => {
+    if (fcourse && q.course !== fcourse) return false;
     if (fp && q.paper !== fp) return false;
     if (fy && q.year !== fy) return false;
     if (fm && q.month !== fm) return false;
@@ -1292,7 +1540,7 @@ function applyFilter() {
 
     if (search) {
       const hay = [
-        q.displayName, q.id, t.note || '',
+        q.displayName, q.id, q.course, t.note || '',
         ...codes, ...codes.map(codeLabel), ...codes.map(c => (CODE_INFO[c] ? CODE_INFO[c].en + ' ' + CODE_INFO[c].ja : ''))
       ].join(' ').toLowerCase();
       if (!hay.includes(search)) return false;
@@ -1335,7 +1583,7 @@ function qCardHtml(q, idx, showImg) {
     : `<span class="topic-chip t0">untagged</span>`;
   return `
     <div class="qcard ${cls} ${selected}" data-idx="${idx}" data-qid="${escapeHtml(q.id)}">
-      <div class="qid">${escapeHtml(q.displayName)}</div>
+      <div class="qid"><span class="course-chip course-${q.courseShort}">${q.courseShort}</span> ${escapeHtml(q.displayName.replace(/^(HL|SL)\s/, ''))}</div>
       <div class="meta">${q.qFiles.length} page(s) • MS: ${q.msFiles.length}</div>
       ${thumb}
       <div class="tags">${chips} ${marks} ${diff} ${lowc}</div>
@@ -1350,7 +1598,8 @@ function renderSubPicker() {
   const topic = document.getElementById('subFilterTopic').value;
   const primary = document.getElementById('modalCode').value;
   const box = document.getElementById('subPicker');
-  const codes = ALL_CODES.filter(c => !topic || codeTopic(c) === topic);
+  const lock = modalCourse === 'AISL' ? 'SL' : '';
+  const codes = ALL_CODES.filter(c => (!topic || codeTopic(c) === topic) && (!lock || CODE_INFO[c].level === lock));
   box.innerHTML = codes.map(c => {
     const on = modalSubcodes.has(c);
     const tp = codeTopic(c);
@@ -1373,7 +1622,8 @@ function syncModalCodeSelect(keep) {
   const topic = document.getElementById('modalTopic').value;
   const sel = document.getElementById('modalCode');
   const cur = keep !== undefined ? keep : sel.value;
-  sel.innerHTML = `<option value="">-- not set --</option>` + codeOptionsHtml({ topic });
+  sel.innerHTML = `<option value="">-- not set --</option>` +
+    codeOptionsHtml({ topic, level: modalCourse === 'AISL' ? 'SL' : '' });
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 
@@ -1385,6 +1635,7 @@ function openModal(list, idx, isManual = false) {
   const q = list[idx];
   if (!q) return;
   const t = getTag(q.id);
+  modalCourse = q.course || '';
 
   document.getElementById('modalTitle').textContent = q.displayName + (isManual ? ' — Preview' : '');
   document.getElementById('modalImgs').innerHTML = q.qFiles.map(f => `<img src="${blobUrlFor(f.name)}" alt="${escapeHtml(f.name)}">`).join('');
@@ -1480,9 +1731,9 @@ function printSingleQuestion() {
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 20px; color: #222; }
   h2 { font-size: 15px; margin: 8px 0 12px; padding-bottom: 4px; border-bottom: 1px solid #ccc; }
-  img { max-width: 100%; display: block; margin: 0 auto 12px; page-break-inside: avoid; }
+  img { max-width: 100%; display: block; margin: 0 0 12px; page-break-inside: avoid; }
   .page-break { page-break-before: always; }
-  @page { margin: 15mm; }
+  @page { margin: 12mm; }
   @media print { body { margin: 0; } h2 { border: none; } }
 </style></head>
 <body>
@@ -1490,12 +1741,16 @@ function printSingleQuestion() {
   ${qImgs}
   ${msImgs ? `<div class="page-break"></div><h2>Mark Scheme — ${q.displayName}</h2>${msImgs}` : ''}
   <script>
+    var PPM = ${pxPerMm()}, MAXMM = ${MAX_IMG_MM};
     window.addEventListener('load', function() {
       var imgs = document.querySelectorAll('img');
       if (imgs.length === 0) { setTimeout(function(){ window.print(); }, 200); return; }
       var loaded = 0;
-      function done() { loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 300); }
-      imgs.forEach(function(img) { if (img.complete) done(); else { img.onload = done; img.onerror = done; } });
+      function done(img) {
+        if (img && img.naturalWidth) img.style.width = Math.min(img.naturalWidth / PPM, MAXMM) + 'mm';
+        loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 300);
+      }
+      imgs.forEach(function(img) { if (img.complete) done(img); else { img.onload = function(){done(img);}; img.onerror = function(){done(img);}; } });
     });
   <\/script>
 </body></html>`
@@ -1532,12 +1787,14 @@ function genMatches(q) {
   if (!t.code || !t.marks) return false;
   const inclSub = document.getElementById('genInclSub').checked;
   const codes = tagCodes(q.id, inclSub);
+  const course = document.getElementById('genCourse').value;
   const paperFilter = document.getElementById('genPaper').value;
   const level = document.getElementById('genLevel').value;
   const selTopics = [...document.getElementById('genTopics').selectedOptions].map(o => o.value);
   const selCodes  = [...document.getElementById('genCodes').selectedOptions].map(o => o.value);
   const yearFrom = document.getElementById('genYearFrom').value;
   const yearTo   = document.getElementById('genYearTo').value;
+  if (course && q.course !== course) return false;
   if (paperFilter && q.paper !== paperFilter) return false;
   if (yearFrom && q.year < yearFrom) return false;
   if (yearTo && q.year > yearTo) return false;
@@ -1633,6 +1890,7 @@ function renderGenOutput(list, includeMS) {
     });
   }
   out.innerHTML = html;
+  sizeImagesMm(out);
   out.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1732,9 +1990,9 @@ function generateFromSelection() {
   .cover-note { font-size: 12px; color:#666; margin-top: 40px; font-style: italic; }
   .qbox { page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; }
   .qbox h3 { font-size: 14px; margin: 10px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ccc; }
-  img { max-width: 100%; display: block; margin: 0 auto 10px; page-break-inside: avoid; }
+  img { max-width: 100%; display: block; margin: 0 0 10px; page-break-inside: avoid; }
   .booklet-break { page-break-before: always; }
-  @page { margin: 15mm; }
+  @page { margin: 12mm; }
   @media print { body { margin: 0; } .qbox h3 { border-color: #999; } }
 </style></head>
 <body>
@@ -1742,12 +2000,16 @@ function generateFromSelection() {
   <div class="booklet-break"></div>
   ${msBooklet}
   <script>
+    var PPM = ${pxPerMm()}, MAXMM = ${MAX_IMG_MM};
     window.addEventListener('load', function() {
       var imgs = document.querySelectorAll('img');
       if (imgs.length === 0) { setTimeout(function(){ window.print(); }, 200); return; }
       var loaded = 0;
-      function done() { loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 500); }
-      imgs.forEach(function(img) { if (img.complete) done(); else { img.onload = done; img.onerror = done; } });
+      function done(img) {
+        if (img && img.naturalWidth) img.style.width = Math.min(img.naturalWidth / PPM, MAXMM) + 'mm';
+        loaded++; if (loaded === imgs.length) setTimeout(function(){ window.print(); }, 500);
+      }
+      imgs.forEach(function(img) { if (img.complete) done(img); else { img.onload = function(){done(img);}; img.onerror = function(){done(img);}; } });
     });
   <\/script>
 </body></html>`
@@ -1759,12 +2021,14 @@ function generateFromSelection() {
 // COVERAGE TAB
 // ============================================================
 function renderCoverage() {
+  const course = document.getElementById('covCourse').value;
   const level = document.getElementById('covLevel').value;
   const inclSub = document.getElementById('covInclSub').checked;
   const hideZero = document.getElementById('covHideZero').checked;
   const counts = {};
   for (const c of ALL_CODES) counts[c] = 0;
-  const src = questions.length ? questions.map(q => q.id) : Object.keys(PRESET_TAGS);
+  let src = questions.length ? questions.map(q => q.id) : Object.keys(PRESET_TAGS);
+  if (course) src = src.filter(id => id.startsWith(course + '-'));
   for (const qid of src) for (const c of tagCodes(qid, inclSub)) if (counts[c] !== undefined) counts[c]++;
 
   let covered = 0, totalCodes = 0;
@@ -1822,7 +2086,7 @@ function exportTags() {
   const blob = new Blob([JSON.stringify(tagDB, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `ib_aihl_tags_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `ib_ai_tags_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
 }
 function importTags() {
@@ -1858,7 +2122,7 @@ function exportHist() {
   const blob = new Blob([JSON.stringify(histDB, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `ib_aihl_history_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `ib_ai_history_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
 }
 function clearHist() {
@@ -1934,7 +2198,7 @@ document.querySelectorAll('.tab').forEach(t => {
 
 document.getElementById('btnLoad').onclick = loadFolder;
 
-['searchInput','filterPaper','filterYear','filterMonth','filterTZ','showImg','inclSub','filterCode'].forEach(id => {
+['searchInput','filterCourse','filterPaper','filterYear','filterMonth','filterTZ','showImg','inclSub','filterCode'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderBank);
   document.getElementById(id).addEventListener('change', renderBank);
 });
@@ -1991,13 +2255,13 @@ document.getElementById('genMode').onchange = e => {
   document.getElementById('manualPickPanel').classList.toggle('hidden', !isManual);
   if (isManual) renderManualPick();
 };
-['genPaper','genLevel','genTopics','genCodes','genYearFrom','genYearTo','genInclSub'].forEach(id => {
+['genCourse','genPaper','genLevel','genTopics','genCodes','genYearFrom','genYearTo','genInclSub'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
     if (document.getElementById('genMode').value === 'manual') renderManualPick();
   });
 });
 
-['covLevel','covInclSub','covHideZero'].forEach(id => {
+['covCourse','covLevel','covInclSub','covHideZero'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderCoverage);
 });
 
@@ -2011,6 +2275,22 @@ document.getElementById('btnClearFolderHandles').onclick = async () => {
   if (confirm('Forget all saved folder shortcuts?')) { await idbClear(); refreshSavedFoldersList(); }
 };
 
+function refreshPpm() {
+  document.getElementById('ppmInput').value = pxPerMm();
+  document.getElementById('ppmNote').textContent =
+    `本文カラム1419px ≒ ${(1419 / pxPerMm()).toFixed(0)}mm 幅で印刷されます`;
+}
+document.getElementById('btnSavePpm').onclick = () => {
+  const v = parseFloat(document.getElementById('ppmInput').value);
+  if (!v || v < 2 || v > 30) { alert('2〜30 の範囲で指定してください。'); return; }
+  localStorage.setItem(PPM_KEY, String(v));
+  refreshPpm();
+  alert('保存しました。次に生成する PDF から反映されます。');
+};
+document.getElementById('btnResetPpm').onclick = () => {
+  localStorage.removeItem(PPM_KEY); refreshPpm();
+};
+
 document.getElementById('bulkPattern').oninput = bulkPreview;
 document.getElementById('btnBulkApply').onclick = bulkApply;
 
@@ -2018,6 +2298,8 @@ document.getElementById('testDate').valueAsDate = new Date();
 
 // Init
 initSelects();
+refreshPpm();
+migrateTagKeys();
 mergePresetTags(false);
 setApiBadge();
 updateLoadStatus();
