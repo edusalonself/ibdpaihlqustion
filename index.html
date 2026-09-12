@@ -120,7 +120,7 @@
 <body>
 
 <header>
-  <h1>IB Math AI HL / SL — Past Paper Test Generator</h1>
+  <h1>IB Math AI HL / SL — Past Paper Test Generator <span id="buildTag" style="font-size:11px; font-weight:400; opacity:0.75;"></span></h1>
   <div class="subtitle" id="loadStatus">Initializing…</div>
 </header>
 
@@ -429,6 +429,9 @@ const IDB_NAME     = 'ibAihlDB';
 const IDB_STORE    = 'folderHandles';
 const PPM_KEY      = 'ibAihl_pxPerMm';
 
+// Bump on every release so you can tell at a glance which build is live.
+const BUILD = 'build 4 — 2026-09-12';
+
 // Pixels per millimetre of the normalized question images.
 // The IB A4 page renders at 1654 px wide = 210 mm  →  7.876 px/mm.
 // Images are printed at this scale so HL and SL come out at identical text size.
@@ -562,7 +565,7 @@ const SYLLABUS = {
   }
 };
 
-const PRESET_VERSION = '2026-09-12c';
+const PRESET_VERSION = '2026-09-12d';
 const PRESET_TAGS = {
   "AIHL-2021May-Paper1-TZ1-Q1": {"code": "AHL4.17", "subcodes": [], "marks": 4, "note": "Poisson probability, scaled mean"},
   "AIHL-2021May-Paper1-TZ1-Q2": {"code": "SL3.6", "subcodes": ["SL3.5", "SL2.1"], "marks": 6, "note": "Voronoi diagram, edge gradient"},
@@ -2316,6 +2319,8 @@ document.getElementById('btnBulkApply').onclick = bulkApply;
 document.getElementById('testDate').valueAsDate = new Date();
 
 // Init
+document.getElementById('buildTag').textContent = BUILD;
+
 initSelects();
 refreshPpm();
 migrateTagKeys();
